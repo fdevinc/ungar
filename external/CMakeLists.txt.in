@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(External NONE)
+
+include(ExternalProject)
+
+ExternalProject_Add(
+  cppad
+  GIT_REPOSITORY https://github.com/coin-or/CppAD.git
+  GIT_TAG 20210000.8
+  GIT_SHALLOW TRUE
+  GIT_PROGRESS TRUE
+  CMAKE_CACHE_ARGS -Dcppad_prefix:STRING=${CMAKE_BINARY_DIR}/external/cppad)
+
+ExternalProject_Add(
+  cppadcodegen
+  GIT_REPOSITORY https://github.com/joaoleal/CppADCodeGen.git
+  GIT_TAG v2.4.3
+  GIT_SHALLOW TRUE
+  GIT_PROGRESS TRUE
+  CMAKE_CACHE_ARGS
+    -DCPPAD_HOME:STRING=${CMAKE_BINARY_DIR}/external/cppad/include
+    -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/external/cppadcodegen
+  DEPENDS cppad)
