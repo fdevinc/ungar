@@ -279,10 +279,15 @@ TEST(UtilsTest, SparseMatrixManipulations) {
     const SparseMatrix<real_t> s2 = m2.sparseView();
 
     SparseMatrix<real_t> st1 = Utils::VerticallyStackSparseMatrices(s1, s2).ToSparse();
-    UNGAR_LOG(debug, "Stacked matrix 1:\n{}", st1.toDense());
+    ASSERT_EQ(st1.toDense().topRows(2_idx), m1);
+    ASSERT_EQ(st1.toDense().bottomRows(2_idx), m2);
+
     SparseMatrix<real_t> st2;
     Utils::VerticallyStackSparseMatrices(s2, m2.sparseView(), s1, st1).In(st2);
-    UNGAR_LOG(debug, "Stacked matrix 2:\n{}", st2.toDense());
+    ASSERT_EQ(st2.toDense().topRows(2_idx), s2.toDense());
+    ASSERT_EQ(st2.toDense().middleRows(2_idx, 2_idx), m2);
+    ASSERT_EQ(st2.toDense().middleRows(4_idx, 2_idx), s1.toDense());
+    ASSERT_EQ(st2.toDense().bottomRows(4_idx), st1.toDense());
 }
 
 }  // namespace

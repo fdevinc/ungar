@@ -34,8 +34,8 @@ TEST(FunctionTest, ExponentialMap) {
     using namespace Ungar;
     using namespace Ungar::Autodiff;
 
-    const index_t variableSize  = 3;
-    const index_t parameterSize = 0;
+    const index_t xSize = 3;
+    const index_t pSize = 0;
 
     auto exp = []<typename _Scalar>(const VectorX<_Scalar>& x, VectorX<_Scalar>& y) -> void {
         y = Utils::ApproximateExponentialMap(RefToConstVector3<_Scalar>{x}).coeffs();
@@ -43,7 +43,7 @@ TEST(FunctionTest, ExponentialMap) {
         // Utils::ExponentialMap(RefToConstVector3<_Scalar>{independentVariable}).coeffs();
     };
     Function::Blueprint blueprint{
-        exp, variableSize, parameterSize, "exponential_map_test", EnabledDerivatives::JACOBIAN};
+        exp, xSize, pSize, "exponential_map_test", EnabledDerivatives::JACOBIAN};
     Function function = FunctionFactory::Make(blueprint, true);
 
     VectorXr x = Vector3r::Zero();
@@ -62,21 +62,20 @@ TEST(FunctionTest, Jacobian) {
     using namespace Ungar;
     using namespace Ungar::Autodiff;
 
-    constexpr auto VARIABLE_SIZE  = 4;
-    constexpr auto PARAMETER_SIZE = 1;
-    const index_t variableSize    = VARIABLE_SIZE;
-    const index_t parameterSize   = PARAMETER_SIZE;
+    constexpr auto INDEPENDENT_VARIABLE_SIZE = 4;
+    constexpr auto PARAMETER_SIZE            = 1;
+    const index_t xSize                      = INDEPENDENT_VARIABLE_SIZE;
+    const index_t pSize                      = PARAMETER_SIZE;
 
     auto f = []<typename _Scalar>(const VectorX<_Scalar>& xp, VectorX<_Scalar>& y) -> void {
-        const auto [x, p] = Utils::Decompose<VARIABLE_SIZE, PARAMETER_SIZE>(xp);
+        const auto [x, p] = Utils::Decompose<INDEPENDENT_VARIABLE_SIZE, PARAMETER_SIZE>(xp);
         y                 = VectorX<_Scalar>{{p * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)}};
     };
-    Function::Blueprint blueprint{
-        f, variableSize, parameterSize, "jacobian_test", EnabledDerivatives::JACOBIAN};
+    Function::Blueprint blueprint{f, xSize, pSize, "jacobian_test", EnabledDerivatives::JACOBIAN};
     Function function = FunctionFactory::Make(blueprint, true);
 
-    const VectorXr x  = VectorXr::Random(variableSize);
-    const VectorXr p  = VectorXr::Random(parameterSize);
+    const VectorXr x  = VectorXr::Random(xSize);
+    const VectorXr p  = VectorXr::Random(pSize);
     const VectorXr xp = Utils::Compose(x, p).ToDynamic();
 
     const VectorXr yGroundTruth = VectorXr{{p[0_idx] * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)}};
@@ -103,7 +102,7 @@ TEST(FunctionTest, Jacobian) {
                  return y;
              };
          const auto i : enumerate(1024)) {
-        VectorXr xp = VectorXr::Random(variableSize + parameterSize);
+        VectorXr xp = VectorXr::Random(xSize + pSize);
         EXPECT_TRUE(function.TestFunction(xp, func));
         EXPECT_TRUE(function.TestJacobian(xp));
     }
@@ -113,21 +112,20 @@ TEST(FunctionTest, Hessian) {
     using namespace Ungar;
     using namespace Ungar::Autodiff;
 
-    constexpr auto VARIABLE_SIZE  = 4;
-    constexpr auto PARAMETER_SIZE = 1;
-    const index_t variableSize    = VARIABLE_SIZE;
-    const index_t parameterSize   = PARAMETER_SIZE;
+    constexpr auto INDEPENDENT_VARIABLE_SIZE = 4;
+    constexpr auto PARAMETER_SIZE            = 1;
+    const index_t xSize                      = INDEPENDENT_VARIABLE_SIZE;
+    const index_t pSize                      = PARAMETER_SIZE;
 
     auto f = []<typename _Scalar>(const VectorX<_Scalar>& xp, VectorX<_Scalar>& y) -> void {
-        const auto [x, p] = Utils::Decompose<VARIABLE_SIZE, PARAMETER_SIZE>(xp);
+        const auto [x, p] = Utils::Decompose<INDEPENDENT_VARIABLE_SIZE, PARAMETER_SIZE>(xp);
         y                 = VectorX<_Scalar>{{p * x.squaredNorm()}};
     };
-    Function::Blueprint blueprint{
-        f, variableSize, parameterSize, "hessian_test", EnabledDerivatives::HESSIAN};
+    Function::Blueprint blueprint{f, xSize, pSize, "hessian_test", EnabledDerivatives::HESSIAN};
     Function function = FunctionFactory::Make(blueprint, true);
 
-    const VectorXr x  = VectorXr::Random(variableSize);
-    const VectorXr p  = VectorXr::Random(parameterSize);
+    const VectorXr x  = VectorXr::Random(xSize);
+    const VectorXr p  = VectorXr::Random(pSize);
     const VectorXr xp = Utils::Compose(x, p).ToDynamic();
 
     const MatrixXr hessianGroundTruth = 2.0 * p[0_idx] * MatrixXr::Identity(4_idx, 4_idx);
@@ -138,7 +136,7 @@ TEST(FunctionTest, Hessian) {
     ASSERT_TRUE(function.Hessian(xp).isApprox(hessianGroundTruth));
 
     for (const auto i : enumerate(1024)) {
-        VectorXr xp = VectorXr::Random(variableSize + parameterSize);
+        VectorXr xp = VectorXr::Random(xSize + pSize);
         EXPECT_TRUE(function.TestHessian(xp));
     }
 }

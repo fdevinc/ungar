@@ -94,7 +94,17 @@ class IdleTwiceDifferentiableFunction {
         : _independentVariableSize{independentVariableSize}, _parameterSize{parameterSize} {
     }
 
+    template <typename _XP>
+    VectorX<typename _XP::Scalar> operator()(
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
+        UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
+
+        using ScalarType = typename _XP::Scalar;
+        return VectorX<ScalarType>{};
+    }
+
     template <typename _XP, typename _Y>
+    requires std::same_as<typename _XP::Scalar, typename _Y::Scalar>
     void Evaluate([[maybe_unused]] const Eigen::MatrixBase<_XP>& xp,
                   [[maybe_unused]] Eigen::MatrixBase<_Y> const& y) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
@@ -102,17 +112,23 @@ class IdleTwiceDifferentiableFunction {
     }
 
     template <typename _XP>
-    SparseMatrix<real_t> Jacobian([[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
+    SparseMatrix<typename _XP::Scalar> Jacobian(
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
-        return SparseMatrix<real_t>{0_idx, _independentVariableSize};
+
+        using ScalarType = typename _XP::Scalar;
+        return SparseMatrix<ScalarType>{0_idx, _independentVariableSize};
     }
 
     template <typename _XP>
-    SparseMatrix<real_t> Hessian([[maybe_unused]] const index_t dependentVariableIndex,
-                                 [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
+    SparseMatrix<typename _XP::Scalar> Hessian(
+        [[maybe_unused]] const index_t dependentVariableIndex,
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
         UNGAR_ASSERT(dependentVariableIndex == 0_idx);
-        return SparseMatrix<real_t>{_independentVariableSize, _independentVariableSize};
+
+        using ScalarType = typename _XP::Scalar;
+        return SparseMatrix<ScalarType>{_independentVariableSize, _independentVariableSize};
     }
 
     index_t IndependentVariableSize() const {
@@ -168,9 +184,9 @@ concept NLPOptimizer = NLPProblem<_NLPProblem> &&
 }  // namespace Concepts
 
 template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
-inline auto MakeNLP(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                    Ungar::Concepts::HanaOptional auto optionalEqs,
-                    Ungar::Concepts::HanaOptional auto optionalIneqs) {
+inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
+                           Ungar::Concepts::HanaOptional auto optionalEqs,
+                           Ungar::Concepts::HanaOptional auto optionalIneqs) {
     using Objective             = decltype(obj);
     using EqualityConstraints   = std::remove_cvref_t<decltype(optionalEqs.value_or(
         std::declval<IdleTwiceDifferentiableFunction>()))>;
@@ -203,7 +219,8 @@ struct FunctionInterface {
     template <typename _XP>
     static auto Invoke(
         const Concepts::EvaluableFunction<_XP, VectorX<typename _XP::Scalar>> auto& function,
-        const Eigen::MatrixBase<_XP>& xp) {
+        const Eigen::MatrixBase<_XP>&
+            xp) requires(!Concepts::DifferentiableFunction<decltype(function), _XP>) {
         UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
 
         using ScalarType = typename _XP::Scalar;
