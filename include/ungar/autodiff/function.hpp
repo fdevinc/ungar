@@ -456,15 +456,16 @@ class FunctionFactory {
         void CreateModelsImpl(const std::string& modelName,
                               const std::filesystem::path& library,
                               const bool trimInternalModelSparsity) {
-            VectorXad stackedIndependentVariableAndParameters =
+            VectorXad xp =
                 VectorXad::Ones(_blueprint.independentVariableSize + _blueprint.parameterSize);
-            CppAD::Independent(stackedIndependentVariableAndParameters);
+            CppAD::Independent(xp);
 
-            VectorXad dependentVariable;
+            VectorXad y;
 
-            _blueprint.functionImpl(stackedIndependentVariableAndParameters, dependentVariable);
+            _blueprint.functionImpl(xp, y);
+            UNGAR_ASSERT(y.size() && y.size() == _blueprint.dependentVariableSize);
 
-            ADFun adFun(stackedIndependentVariableAndParameters, dependentVariable);
+            ADFun adFun(xp, y);
             adFun.optimize();
 
             CppAD::cg::ModelCSourceGen<real_t> sourceGen(adFun, modelName);

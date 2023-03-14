@@ -40,11 +40,11 @@ template <Concepts::NLPProblem _NLPProblem = NLPProblem<>>
 class SoftSQPOptimizer {
   public:
     SoftSQPOptimizer(const bool verbose,
-                     const real_t constraintViolationMultiplier,
-                     const index_t maxIterations = 10_idx,
-                     const real_t stiffness      = 1.0,
-                     const real_t epsilon        = 2e-5,
-                     const bool polish           = true)
+                     const real_t constraintViolationMultiplier = 1.0,
+                     const index_t maxIterations                = 10_idx,
+                     const real_t stiffness                     = 1.0,
+                     const real_t epsilon                       = 2e-5,
+                     const bool polish                          = true)
         : _constraintViolationMultiplier{constraintViolationMultiplier},
           _maxIterations{maxIterations},
           _stiffness{stiffness},
@@ -67,13 +67,17 @@ class SoftSQPOptimizer {
         _cache.xp         = xp;
 
         for (const auto i : enumerate(_maxIterations)) {
-            UNGAR_LOG(trace, "Starting soft SQP iteration {}...", i);
+            if (_osqpSettings.verbose) {
+                UNGAR_LOG(trace, "Starting soft SQP iteration {}...", i);
+            }
             const real_t objective =
                 FunctionInterface::Invoke(_nlpProblem->objective, _cache.xp)[0_idx];
 
             SolveLocalQPProblem(_cache.xp);
-            const bool accepted = BacktrackingLineSearch{}.Do(
-                FunctionInterface::Jacobian(_nlpProblem->objective, _cache.xp).transpose(),
+            const bool accepted = BacktrackingLineSearch{_osqpSettings.verbose}.Do(
+                FunctionInterface::Jacobian(_nlpProblem->objective, _cache.xp)
+                    .toDense()
+                    .transpose(),
                 _osqpSolver.primal_solution(),
                 [&](const RefToConstVectorXr& x) -> real_t {
                     xpHelper.head(x.size()) = x;
@@ -98,7 +102,9 @@ class SoftSQPOptimizer {
                 FunctionInterface::Invoke(_nlpProblem->objective, _cache.xp)[0_idx];
             const real_t objectiveDifference = updatedObjective - objective;
             if (objectiveDifference < 0.0 && std::abs(objectiveDifference) < 1e-6) {
-                UNGAR_LOG(trace, "Soft SQP convergence criterion met.");
+                if (_osqpSettings.verbose) {
+                    UNGAR_LOG(trace, "Soft SQP convergence criterion met.");
+                }
                 break;
             }
         }
@@ -209,6 +215,7 @@ class SoftSQPOptimizer {
         return Autodiff::FunctionFactory::Make(
             {Zsoft,
              _nlpProblem->inequalityConstraints.DependentVariableSize(),
+             0_idx,
              softIneqModelName,
              EnabledDerivatives::ALL},
             false);
@@ -225,7 +232,7 @@ class SoftSQPOptimizer {
         const auto ineqJacobian =
             FunctionInterface::Jacobian(_nlpProblem->inequalityConstraints, xp);
 
-        return _softInequalityCnstrs->Jacobian(Zineq, _cache.softIneqRawJacobian) * ineqJacobian;
+        return _softInequalityCnstrs->Jacobian(Zineq) * ineqJacobian;
     }
 
     Eigen::SparseMatrix<real_t> SoftInequalityConstraintsHessianApproximation(const VectorXr& xp) {

@@ -62,3 +62,6 @@ target_link_libraries(utils.test ungar::ungar gtest)
 
 add_executable(variable.test test/variable.test.cpp)
 target_link_libraries(variable.test ungar::ungar gtest)
+
+add_executable(soft_sqp.test test/optimization/soft_sqp.test.cpp)
+target_link_libraries(soft_sqp.test ungar::ungar gtest)

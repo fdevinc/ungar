@@ -27,8 +27,8 @@
 #ifndef _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 #define _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 
+#include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
-#include "ungar/io/logging.hpp"
 
 namespace Ungar {
 namespace Concepts {
@@ -66,14 +66,15 @@ class BacktrackingLineSearch {
                                  (real_t, gammaAlpha));
     };
 
-    constexpr BacktrackingLineSearch(Parameters parameters = {.alphaMin   = 1e-4,
+    constexpr BacktrackingLineSearch(const bool verbose,
+                                     Parameters parameters = {.alphaMin   = 1e-4,
                                                               .thetaMin   = 1e-6,
                                                               .thetaMax   = 1e-2,
                                                               .eta        = 1e-4,
                                                               .gammaPhi   = 1e-6,
                                                               .gammaTheta = 1e-6,
                                                               .gammaAlpha = 0.5})
-        : _parameters(std::move(parameters)) {
+        : _verbose{verbose}, _parameters(std::move(parameters)) {
     }
 
     template <typename _CostFunctionGradient, typename _SearchDirection, typename _W>
@@ -81,7 +82,8 @@ class BacktrackingLineSearch {
                           const Eigen::MatrixBase<_SearchDirection>& dw,
                           const Concepts::CostFunction<_W> auto& costFunction,
                           const Concepts::ConstraintViolation<_W> auto& constraintViolation,
-                          Eigen::MatrixBase<_W>& w) const {
+                          Eigen::MatrixBase<_W> const& w,
+                          const bool verbose = false) const {
         UNGAR_ASSERT(costFunctionGradient.cols() == 1_idx);
         UNGAR_ASSERT(dw.cols() == 1_idx);
         UNGAR_ASSERT(costFunctionGradient.rows() == dw.rows());
@@ -91,44 +93,56 @@ class BacktrackingLineSearch {
         real_t alpha       = 1.0;
         const real_t theta = constraintViolation(w);
         const real_t phi   = costFunction(w);
-        UNGAR_LOG(trace, "Performing a backtracking line search...");
-        UNGAR_LOG(trace,
-                  "\t{:>5}{:>36}{:>36}{:>36}",
-                  "",
-                  "",
-                  "Initial constraint violation",
-                  "Initial cost function value");
-        UNGAR_LOG(trace, "\t{:>5}{:>36}{:>36}{:>36}", "", "", theta, phi);
+        if (_verbose) {
+            UNGAR_LOG(trace, "Performing a backtracking line search...");
+            UNGAR_LOG(trace,
+                      "\t{:>5}{:>36}{:>36}{:>36}",
+                      "",
+                      "",
+                      "Initial constraint violation",
+                      "Initial cost function value");
+            UNGAR_LOG(trace, "\t{:>5}{:>36}{:>36}{:>36}", "", "", theta, phi);
+        }
 
         bool accepted          = false;
         [[maybe_unused]] int i = 1;
-        UNGAR_LOG(trace,
-                  "\t{:>5}{:>36}{:>36}{:>36}",
-                  "It.",
-                  "Step size",
-                  "Constraint violation",
-                  "Cost function value");
+        if (_verbose) {
+            UNGAR_LOG(trace,
+                      "\t{:>5}{:>36}{:>36}{:>36}",
+                      "It.",
+                      "Step size",
+                      "Constraint violation",
+                      "Cost function value");
+        }
         while (!accepted && alpha >= _parameters.alphaMin) {
             const VectorXr wNext   = w + alpha * dw;
             const real_t thetaNext = constraintViolation(wNext);
             const real_t phiNext   = costFunction(wNext);
-            UNGAR_LOG(trace, "\t{:>5}{:>36}{:>36}{:>36}", i++, alpha, thetaNext, phiNext);
+            if (_verbose) {
+                UNGAR_LOG(trace, "\t{:>5}{:>36}{:>36}{:>36}", i++, alpha, thetaNext, phiNext);
+            }
 
             if (thetaNext > _parameters.thetaMax) {
                 if (thetaNext < (1.0 - _parameters.gammaTheta) * theta) {
                     accepted = true;
-                    UNGAR_LOG(trace, "Iteration accepted to reduce the constraint violations.");
+                    if (_verbose) {
+                        UNGAR_LOG(trace, "Iteration accepted to reduce the constraint violations.");
+                    }
                 }
             } else if (std::max(theta, thetaNext) < _parameters.thetaMin && dwProjection < 0.0) {
                 if (phiNext < phi + _parameters.eta * alpha * dwProjection) {
                     accepted = true;
-                    UNGAR_LOG(trace, "Armijo condition satisfied: iteration accepted.");
+                    if (_verbose) {
+                        UNGAR_LOG(trace, "Armijo condition satisfied: iteration accepted.");
+                    }
                 }
             } else {
                 if (phiNext < (1.0 - _parameters.gammaPhi) * phi ||
                     thetaNext < (1.0 - _parameters.gammaTheta) * theta) {
                     accepted = true;
-                    UNGAR_LOG(trace, "Iteration accepted.");
+                    if (_verbose) {
+                        UNGAR_LOG(trace, "Iteration accepted.");
+                    }
                 }
             }
 
@@ -140,9 +154,12 @@ class BacktrackingLineSearch {
         if (accepted) {
             w.const_cast_derived() += alpha * dw;
         } else {
-            UNGAR_LOG(trace,
-                      "The line search could not find a satisfactory step size and the solution "
-                      "was not updated.");
+            if (_verbose) {
+                UNGAR_LOG(
+                    trace,
+                    "The line search could not find a satisfactory step size and the solution "
+                    "was not updated.");
+            }
         }
 
         return accepted;
@@ -157,6 +174,7 @@ class BacktrackingLineSearch {
     }
 
   private:
+    bool _verbose;
     struct Parameters _parameters;
 };
 

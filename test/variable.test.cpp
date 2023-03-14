@@ -26,7 +26,6 @@
 
 #include <gtest/gtest.h>
 
-#include "ungar/optimization/soft_sqp.hpp"
 #include "ungar/variable_map.hpp"
 
 namespace Ungar {
