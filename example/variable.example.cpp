@@ -97,7 +97,20 @@ int main() {
     static_assert(U.At<"u">(8).At<"leg_input">(2).At<"relative_position">().Index() ==
                   U(relative_position, 8, 2).Index());
 
-    // Perform an operation for each subvariable in a given hierarchy.
+    /***************     Operate on each subvariable in a given hierarchy.    ***************/
+    const auto getKind = [](Concepts::Variable auto v) {
+        if (v.IsScalar()) {
+            return "'scalar'"s;
+        } else if (v.IsVector()) {
+            return "'vector'"s;
+        } else if (v.IsQuaternion()) {
+            return "'quaternion'"s;
+        } else {
+            return "'unknown'"s;
+        }
+    };
+
+    // Define a Boost.Hana struct to benefit from the printing capabilities of UNGAR_LOG.
     struct VariableInfo {
         BOOST_HANA_DEFINE_STRUCT(VariableInfo,
                                  (std::string, name),
@@ -105,23 +118,12 @@ int main() {
                                  (index_t, size),
                                  (std::string, kind));
     };
+
     UNGAR_LOG(info,
               "Printing all subvariables of 'x' with the format { name, index, size, kind }...");
-    x.ForEach([](auto var) {
+    x.ForEach([&](Concepts::Variable auto var) {
         UNGAR_LOG(
-            info,
-            "{:c}",
-            VariableInfo{var.Name().c_str(), var.Index(), var.Size(), [](auto v) -> std::string {
-                             if (v.IsScalar()) {
-                                 return "'scalar'"s;
-                             } else if (v.IsVector()) {
-                                 return "'vector'"s;
-                             } else if (v.IsQuaternion()) {
-                                 return "'quaternion'"s;
-                             }
-
-                             return "'unknown'"s;
-                         }(var)});
+            info, "{:c}", VariableInfo{var.Name().c_str(), var.Index(), var.Size(), getKind(var)});
     });
 
     return 0;
