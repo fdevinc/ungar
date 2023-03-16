@@ -40,8 +40,8 @@ int main() {
     UNGAR_LEAF_VARIABLE(linear_velocity, 3);    // := pDot
     UNGAR_LEAF_VARIABLE(force, 3);              // := f
     UNGAR_LEAF_VARIABLE(mass, 1);               // := m
-    UNGAR_LEAF_VARIABLE(state_cost_weight, 1);  // := wp
-    UNGAR_LEAF_VARIABLE(input_cost_weight, 1);  // := wpDot
+    UNGAR_LEAF_VARIABLE(state_cost_weight, 1);  // := wx
+    UNGAR_LEAF_VARIABLE(input_cost_weight, 1);  // := wu
 
     /***************                Define "branch" variables.                ***************/
     // States are stacked poses and velocities, while inputs are forces applied
@@ -50,8 +50,7 @@ int main() {
     UNGAR_BRANCH_VARIABLE(u) <<= force;                        // u := f
     UNGAR_BRANCH_VARIABLE(X) <<= (N + 1_c) * x;                // X := [x0 x1 ... xN]
     UNGAR_BRANCH_VARIABLE(U) <<= N * u;                        // U := [u0 u1 ... uN-1]
-
-    UNGAR_BRANCH_VARIABLE(XRef) <<= (N + 1_c) * x;  // XRef := [xRef0 xRef1 ... xRefN]
+    UNGAR_BRANCH_VARIABLE(XRef) <<= (N + 1_c) * x;             // XRef := [xRef0 xRef1 ... xRefN]
 
     UNGAR_BRANCH_VARIABLE(decision_variables) <<= (X, U);
     UNGAR_BRANCH_VARIABLE(parameters) <<= (mass, XRef, state_cost_weight, input_cost_weight);
@@ -61,21 +60,21 @@ int main() {
     const Autodiff::Function::Blueprint functionBlueprint{
         [&](const VectorXad& xp, VectorXad& y) {
             // Create variables maps on existing arrays of data.
-            const auto varsMap = MakeVariableLazyMap(xp, variables);
+            const auto vars = MakeVariableLazyMap(xp, variables);
 
             // You can further split the stacked independent variables and parameters.
-            // const auto decisionMap =
+            // const auto decVars =
             //     MakeVariableLazyMap(varsMap.Get(decision_variables), decision_variables);
-            // const auto paramsMap = MakeVariableLazyMap(varsMap.Get(parameters), parameters);
+            // const auto params = MakeVariableLazyMap(varsMap.Get(parameters), parameters);
 
             y = VectorXr::Zero(1);
             for (auto k : enumerate(N)) {
-                y[0] += varsMap.Get(state_cost_weight) *
-                            (varsMap.Get(X, x, k) - varsMap.Get(XRef, x, k)).squaredNorm() +
-                        varsMap.Get(input_cost_weight) * varsMap.Get(U, u, k).squaredNorm();
+                y[0] += vars.Get(state_cost_weight) *
+                            (vars.Get(X, x, k) - vars.Get(XRef, x, k)).squaredNorm() +
+                        vars.Get(input_cost_weight) * vars.Get(U, u, k).squaredNorm();
             }
-            y[0] += varsMap.Get(state_cost_weight) *
-                    (varsMap.Get(X, x, N) - varsMap.Get(XRef, x, N)).squaredNorm();
+            y[0] += vars.Get(state_cost_weight) *
+                    (vars.Get(X, x, N) - vars.Get(XRef, x, N)).squaredNorm();
         },
         decision_variables.Size(),
         parameters.Size(),
