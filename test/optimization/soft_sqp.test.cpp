@@ -64,9 +64,9 @@ TEST(OptimizationTest, SoftSQP) {
                             pSize,
                             "ineqs_1_soft_sqp_test"sv,
                             EnabledDerivatives::JACOBIAN};
-    auto nlpProblem1 = MakeNLPProblem(FunctionFactory::Make(objBlueprint, true),
+    auto nlpProblem1 = MakeNLPProblem(MakeFunction(objBlueprint, true),
                                       hana::nothing,
-                                      hana::just(FunctionFactory::Make(ineqsBlueprint1, true)));
+                                      hana::just(MakeFunction(ineqsBlueprint1, true)));
     SoftSQPOptimizer<decltype(nlpProblem1)::element_type> optimizer1{
         false, 1.0, 100_idx, 100.0, 2e-8};
     optimizer1.Initialize(std::move(nlpProblem1));
@@ -91,9 +91,9 @@ TEST(OptimizationTest, SoftSQP) {
                             pSize,
                             "ineqs_2_soft_sqp_test"sv,
                             EnabledDerivatives::JACOBIAN};
-    auto nlpProblem2 = MakeNLPProblem(FunctionFactory::Make(objBlueprint, false),
+    auto nlpProblem2 = MakeNLPProblem(MakeFunction(objBlueprint, false),
                                       hana::nothing,
-                                      hana::just(FunctionFactory::Make(ineqsBlueprint2, true)));
+                                      hana::just(MakeFunction(ineqsBlueprint2, true)));
     SoftSQPOptimizer<decltype(nlpProblem2)::element_type> optimizer2{
         false, 1.0, 100_idx, 100.0, 2e-8};
     optimizer2.Initialize(std::move(nlpProblem2));
@@ -108,9 +108,9 @@ TEST(OptimizationTest, SoftSQP) {
               xOpt2);
     ASSERT_PRED2(predicate, xOpt2, xOptGroundTruth2);
 
-    auto nlpProblem3 = MakeNLPProblem(FunctionFactory::Make(objBlueprint, false),
-                                      hana::just(FunctionFactory::Make(eqsBlueprint, true)),
-                                      hana::just(FunctionFactory::Make(ineqsBlueprint2, false)));
+    auto nlpProblem3 = MakeNLPProblem(MakeFunction(objBlueprint, false),
+                                      hana::just(MakeFunction(eqsBlueprint, true)),
+                                      hana::just(MakeFunction(ineqsBlueprint2, false)));
     SoftSQPOptimizer<decltype(nlpProblem3)::element_type> optimizer3{
         false, 1.0, 100_idx, 100.0, 2e-8};
     optimizer3.Initialize(std::move(nlpProblem3));

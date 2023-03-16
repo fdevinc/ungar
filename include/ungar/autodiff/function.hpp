@@ -590,9 +590,8 @@ class FunctionFactory {
 
   public:
     static Function Make(const Function::Blueprint& blueprint,
-                         const bool recompileLibraries          = false,
-                         std::vector<std::string> compilerFlags = {
-                             "-O3"s, "-g"s, "-march=native"s, "-mtune=native"s, "-ffast-math"s}) {
+                         const bool recompileLibraries,
+                         std::vector<std::string> compilerFlags) {
         Worker worker{blueprint, std::move(compilerFlags)};
 
         UNGAR_LOG(info, "{}", Utils::DASH_LINE_SEPARATOR);
@@ -607,6 +606,14 @@ class FunctionFactory {
                 blueprint.dependentVariableSize};
     }
 };
+
+inline Function MakeFunction(
+    const Function::Blueprint& blueprint,
+    const bool recompileLibraries          = false,
+    std::vector<std::string> compilerFlags = {
+        "-O3"s, "-g"s, "-march=native"s, "-mtune=native"s, "-ffast-math"s}) {
+    return FunctionFactory::Make(blueprint, recompileLibraries, std::move(compilerFlags));
+}
 
 }  // namespace Autodiff
 }  // namespace Ungar

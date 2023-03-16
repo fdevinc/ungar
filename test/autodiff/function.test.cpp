@@ -44,7 +44,7 @@ TEST(FunctionTest, ExponentialMap) {
     };
     Function::Blueprint blueprint{
         exp, xSize, pSize, "exponential_map_test", EnabledDerivatives::JACOBIAN};
-    Function function = FunctionFactory::Make(blueprint, true);
+    Function function = MakeFunction(blueprint, true);
 
     VectorXr x = Vector3r::Zero();
     ASSERT_TRUE(function.TestFunction(
@@ -72,7 +72,7 @@ TEST(FunctionTest, Jacobian) {
         y                 = VectorX<_Scalar>{{p * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)}};
     };
     Function::Blueprint blueprint{f, xSize, pSize, "jacobian_test", EnabledDerivatives::JACOBIAN};
-    Function function = FunctionFactory::Make(blueprint, true);
+    Function function = MakeFunction(blueprint, true);
 
     const VectorXr x  = VectorXr::Random(xSize);
     const VectorXr p  = VectorXr::Random(pSize);
@@ -122,7 +122,7 @@ TEST(FunctionTest, Hessian) {
         y                 = VectorX<_Scalar>{{p * x.squaredNorm()}};
     };
     Function::Blueprint blueprint{f, xSize, pSize, "hessian_test", EnabledDerivatives::HESSIAN};
-    Function function = FunctionFactory::Make(blueprint, true);
+    Function function = MakeFunction(blueprint, true);
 
     const VectorXr x  = VectorXr::Random(xSize);
     const VectorXr p  = VectorXr::Random(pSize);

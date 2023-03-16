@@ -167,9 +167,6 @@ class Variable {
         return Get(string_c<_NAME>);
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
     template <Concepts::HanaString _N>
     constexpr const auto& Get(_N name, const std::integral auto i) const {
         if constexpr (is_std_array_v<std::remove_cvref_t<decltype(DefaultMap()[_N{}])>>) {
@@ -179,34 +176,41 @@ class Variable {
         }
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
+    template <Concepts::HanaString _N>
+    constexpr const auto& Get(_N name, Concepts::HanaIntegralConstant auto i) const {
+        return Get(name, i.value);
+    }
+
     constexpr const auto& Get(Concepts::Variable auto var, const std::integral auto i) const {
         return Get(var.Name(), i);
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
+    constexpr const auto& Get(Concepts::Variable auto var,
+                              Concepts::HanaIntegralConstant auto i) const {
+        return Get(var.Name(), i.value);
+    }
+
     template <fixed_string _NAME>
     constexpr const auto& At(const std::integral auto i) const {
         return Get(string_c<_NAME>, i);
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
+    template <fixed_string _NAME>
+    constexpr const auto& At(Concepts::HanaIntegralConstant auto i) const {
+        return Get(string_c<_NAME>, i.value);
+    }
+
     constexpr const auto& Get(auto key, auto... args) const
         requires(hana::contains(hana::keys(_Map{}), decltype(key)::Name()).value) {
         return Get(key).Get(args...);
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
     constexpr const auto& Get(auto key, const std::integral auto i, auto... args) const {
         return Get(key, i).Get(args...);
+    }
+
+    constexpr const auto& Get(auto key, Concepts::HanaIntegralConstant auto i, auto... args) const {
+        return Get(key, i.value).Get(args...);
     }
 
     /**
@@ -220,9 +224,6 @@ class Variable {
         }
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
     constexpr decltype(auto) operator()(Concepts::Variable auto var,
                                         const std::integral auto i,
                                         auto... args) const {
@@ -233,9 +234,16 @@ class Variable {
         }
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
+    constexpr decltype(auto) operator()(Concepts::Variable auto var,
+                                        Concepts::HanaIntegralConstant auto i,
+                                        auto... args) const {
+        if constexpr (sizeof...(args)) {
+            return BypassImpl(var.Name(), i.value).value().get()(args...);
+        } else {
+            return BypassImpl(var.Name(), i.value).value().get();
+        }
+    }
+
     constexpr decltype(auto) operator()(Concepts::Variable auto var,
                                         const std::integral auto i1,
                                         const std::integral auto i2,

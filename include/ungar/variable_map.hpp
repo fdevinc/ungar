@@ -67,23 +67,23 @@ class VariableMap : private VectorX<_Scalar>,
         return map;
     }
 
-  public:
-    using ScalarType = _Scalar;
-
-    VariableMap(const VariableType& var, hana::basic_type<_Scalar>)
-        : VectorType{var.Size()},
-          LazyMapType{Get(), var},
-          _impl{InitImpl(AsLazyMap(), var, hana::false_c)},
-          _constImpl{InitImpl(AsLazyMap(), var, hana::true_c)} {
-        UNGAR_ASSERT(!var.Index());
-    }
-
     LazyMapType& AsLazyMap() {
         return static_cast<LazyMapType&>(*this);
     }
 
     const LazyMapType& AsLazyMap() const {
         return static_cast<const LazyMapType&>(*this);
+    }
+
+  public:
+    using ScalarType = _Scalar;
+
+    VariableMap(hana::basic_type<_Scalar>, const VariableType& var)
+        : VectorType{var.Size()},
+          LazyMapType{Get(), var},
+          _impl{InitImpl(AsLazyMap(), var, hana::false_c)},
+          _constImpl{InitImpl(AsLazyMap(), var, hana::true_c)} {
+        UNGAR_ASSERT(!var.Index());
     }
 
     decltype(auto) Get() const {
@@ -138,9 +138,9 @@ class VariableMap : private VectorX<_Scalar>,
 template <typename _Scalar, Concepts::Variable _Variable>
 VariableMap(const _Variable& var, hana::basic_type<_Scalar>) -> VariableMap<_Scalar, _Variable>;
 
-template <typename _Scalar, Concepts::Variable _Variable>
-inline static auto MakeVariableMap(const _Variable& var) {
-    return VariableMap{var, hana::type_c<_Scalar>};
+template <typename _Scalar>
+inline static auto MakeVariableMap(const Concepts::Variable auto& var) {
+    return VariableMap{hana::type_c<_Scalar>, var};
 }
 
 }  // namespace Ungar

@@ -212,13 +212,12 @@ class SoftSQPOptimizer {
             "soft_sqp_soft_ineq_sz_"s +
             std::to_string(_nlpProblem->inequalityConstraints.DependentVariableSize()) + "_k_" +
             std::to_string(_stiffness) + "_eps_" + std::to_string(_epsilon));
-        return Autodiff::FunctionFactory::Make(
-            {Zsoft,
-             _nlpProblem->inequalityConstraints.DependentVariableSize(),
-             0_idx,
-             softIneqModelName,
-             EnabledDerivatives::ALL},
-            false);
+        return Autodiff::MakeFunction({Zsoft,
+                                       _nlpProblem->inequalityConstraints.DependentVariableSize(),
+                                       0_idx,
+                                       softIneqModelName,
+                                       EnabledDerivatives::ALL},
+                                      false);
     }
 
     real_t EvaluateSoftInequalityConstraints(const VectorXr& xp) {

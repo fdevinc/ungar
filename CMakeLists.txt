@@ -65,3 +65,12 @@ target_link_libraries(variable.test ungar::ungar gtest)
 
 add_executable(soft_sqp.test test/optimization/soft_sqp.test.cpp)
 target_link_libraries(soft_sqp.test ungar::ungar gtest)
+
+add_executable(variable.example example/variable.example.cpp)
+target_link_libraries(variable.example ungar::ungar)
+
+add_executable(variable_map.example example/variable_map.example.cpp)
+target_link_libraries(variable_map.example ungar::ungar)
+
+add_executable(function.example example/autodiff/function.example.cpp)
+target_link_libraries(function.example ungar::ungar)

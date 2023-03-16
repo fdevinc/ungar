@@ -164,6 +164,14 @@ VariableLazyMap(auto& underlying, const Concepts::Variable auto& var)
                        std::remove_cvref_t<decltype(var)>,
                        hana::bool_<true>>;
 
+inline static auto MakeVariableLazyMap(const auto& underlying, const Concepts::Variable auto& var) {
+    return VariableLazyMap{underlying, var};
+}
+
+inline static auto MakeVariableLazyMap(auto& underlying, const Concepts::Variable auto& var) {
+    return VariableLazyMap{underlying, var};
+}
+
 }  // namespace Ungar
 
 #endif /* _UNGAR__VARIABLE_LAZY_MAP_HPP_ */
