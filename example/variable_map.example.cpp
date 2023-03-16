@@ -66,7 +66,7 @@ int main() {
     auto vars = MakeVariableMap<real_t>(variables);  // [ X   u0    u1   ...  uN-1 ]
     vars.Get(u, 0).setZero();                        // [ X  0000   u1   ...  uN-1 ]
     vars.Get(u, 1).setOnes();                        // [ X  0000  1111  ...  uN-1 ]
-    vars.Get(u, N - 1).setConstant(2.0);             // [ X  0000  1111  ...  2222 ]
+    vars.Get(u, N - 1).setLinSpaced(2.0, 8.0);       // [ X  0000  1111  ...  2468 ]
 
     static_assert(std::same_as<decltype(vars.Get(rotor_speed, 0, 0)), real_t&>);
     static_assert(std::same_as<decltype(vars.Get(position, 0)), Eigen::Map<Vector3r>&>);
