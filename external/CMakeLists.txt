@@ -38,19 +38,23 @@ FetchContent_Declare(
   GIT_PROGRESS TRUE)
 FetchContent_MakeAvailable(finitediff)
 
-message(STATUS "Fetching osqpcpp...")
-FetchContent_Declare(
-  osqpcpp
-  GIT_REPOSITORY git@github.com:google/osqp-cpp.git
-  GIT_SHALLOW TRUE
-  GIT_PROGRESS TRUE)
-FetchContent_MakeAvailable(osqpcpp)
+if(${UNGAR_BUILD_SQP})
+  message(STATUS "Fetching osqpcpp...")
+  FetchContent_Declare(
+    osqpcpp
+    GIT_REPOSITORY git@github.com:google/osqp-cpp.git
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE)
+  FetchContent_MakeAvailable(osqpcpp)
+endif()
 
-configure_file(CMakeLists.txt.in
-               ${CMAKE_BINARY_DIR}/external-build/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} .
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external-build)
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external-build)
-find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/external/cppad/lib
-                                       REQUIRED)
+if(${UNGAR_BUILD_AD})
+  configure_file(CMakeLists.txt.in
+                ${CMAKE_BINARY_DIR}/external-build/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} .
+                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external-build)
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+                  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external-build)
+  find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/external/cppad/lib
+                                        REQUIRED)
+endif()
