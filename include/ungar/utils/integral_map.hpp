@@ -34,6 +34,8 @@ namespace Ungar {
 template <typename _T, size_t _MAX_SIZE>
 class integral_map {
   public:
+    /// @todo Consider using std::unique_ptr instead of std::optional to
+    ///       reduce the memory footprint.
     using array_type = std::array<std::optional<_T>, _MAX_SIZE>;
     using value_type = _T;
 

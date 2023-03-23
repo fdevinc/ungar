@@ -27,7 +27,9 @@
 #ifndef _UNGAR__IO__LOGGING_HPP_
 #define _UNGAR__IO__LOGGING_HPP_
 
-#ifndef UNGAR_RELEASE
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
+
+#ifndef UNGAR_CONFIG_ENABLE_RELEASE_MODE
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #endif
 
@@ -39,6 +41,7 @@
 #include <spdlog/spdlog.h>
 
 namespace Ungar {
+namespace Internal {
 
 class Logger {
   public:
@@ -58,7 +61,7 @@ class Logger {
         }
 
         auto logger = spdlog::stdout_color_mt(NAME);
-#ifndef UNGAR_RELEASE
+#ifndef UNGAR_CONFIG_ENABLE_RELEASE_MODE
         logger->set_level(spdlog::level::trace);
 #endif
         logger->set_pattern("[%H:%M:%S.%e] [%n] [%^%l%$] %v");
@@ -74,15 +77,16 @@ class Logger {
     }
 };
 
+}  // namespace Internal
 }  // namespace Ungar
 
-#define SPDLOG_LOGGER_trace SPDLOG_LOGGER_TRACE
-#define SPDLOG_LOGGER_debug SPDLOG_LOGGER_DEBUG
-#define SPDLOG_LOGGER_info SPDLOG_LOGGER_INFO
-#define SPDLOG_LOGGER_warn SPDLOG_LOGGER_WARN
-#define SPDLOG_LOGGER_error SPDLOG_LOGGER_ERROR
-#define SPDLOG_LOGGER_critical SPDLOG_LOGGER_CRITICAL
-#define UNGAR_LOG(level, ...) SPDLOG_LOGGER_##level(::Ungar::Logger::Get(), __VA_ARGS__)
+#define _UNGAR_LOG_IMPL_trace SPDLOG_LOGGER_TRACE
+#define _UNGAR_LOG_IMPL_debug SPDLOG_LOGGER_DEBUG
+#define _UNGAR_LOG_IMPL_info SPDLOG_LOGGER_INFO
+#define _UNGAR_LOG_IMPL_warn SPDLOG_LOGGER_WARN
+#define _UNGAR_LOG_IMPL_error SPDLOG_LOGGER_ERROR
+#define _UNGAR_LOG_IMPL_critical SPDLOG_LOGGER_CRITICAL
+#define UNGAR_LOG(level, ...) _UNGAR_LOG_IMPL_##level(::Ungar::Internal::Logger::Get(), __VA_ARGS__)
 
 namespace fmt {
 
@@ -141,5 +145,10 @@ struct  formatter<_HanaStruct> {  // clang-format on
 };
 
 }  // namespace fmt
+
+#else
+#error \
+    "Ungar's logging functionalities are disabled. To enable them, set the CMake flag UNGAR_ENABLE_LOGGING to 'ON'."
+#endif
 
 #endif /* _UNGAR__IO__LOGGING_HPP_ */

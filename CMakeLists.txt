@@ -2,75 +2,127 @@ cmake_minimum_required(VERSION 3.20)
 
 project(Ungar VERSION 1.0.0)
 
-option(UNGAR_RELEASE "Enable Ungar release mode." OFF)
+add_library(ungar INTERFACE)
+add_library(ungar::ungar ALIAS ungar)
+target_compile_features(ungar INTERFACE cxx_std_20)
 
-if(MSVC)
-  add_compile_options("/std:c++latest" "/Zc:preprocessor" "/W4"
-                      "$<$<CONFIG:RELEASE>:/O2>" "/wd5105")
-else()
-  add_compile_options(
-    "-std=c++20" # "-Wall" "-Wextra"
-    "-pedantic"
-    "-ftemplate-backtrace-limit=1"
-    "-fconstexpr-depth=2147483647"
-    "-fconstexpr-loop-limit=2147483647"
-    "-fconstexpr-cache-depth=2147483647"
-    "-fconstexpr-ops-limit=2147483647"
-    "$<$<CONFIG:RELEASE>:-O3>")
+# ##############################################################################
+# Set up CMake options.
+# ##############################################################################
+option(UNGAR_BUILD_TESTS "Add targets for unit testing." OFF)
+option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." OFF)
+option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." OFF)
+option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." OFF)
+option(UNGAR_ENABLE_OPTIMIZATION
+       "Enable Ungar's nonlinear programming interface." OFF)
+
+if(UNGAR_ENABLE_AUTODIFF AND NOT UNGAR_ENABLE_LOGGING)
+  message(
+    FATAL_ERROR
+      "Ungar's autodiff interface requires logging functionalities."
+      " To enable logging, set the CMake flag UNGAR_ENABLE_LOGGING to 'ON'.")
+endif()
+if(UNGAR_ENABLE_OPTIMIZATION
+   AND NOT UNGAR_ENABLE_LOGGING
+   AND NOT UNGAR_ENABLE_AUTODIFF)
+  message(
+    FATAL_ERROR
+      "Ungar's optimization interface requires logging and autodiff functionalities."
+      " To enable both, set the CMake flags UNGAR_ENABLE_LOGGING and UNGAR_ENABLE_AUTODIFF to 'ON'."
+  )
+endif()
+if(UNGAR_BUILD_EXAMPLES AND NOT UNGAR_ENABLE_LOGGING)
+  message(
+    FATAL_ERROR
+      "Ungar's examples require logging functionalities."
+      " To enable logging, set the CMake flag UNGAR_ENABLE_LOGGING to 'ON'.")
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Add external dependencies.
 add_subdirectory(external)
 
-add_library(ungar INTERFACE)
-add_library(ungar::ungar ALIAS ungar)
-
-target_include_directories(
-  ungar
-  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${CMAKE_BINARY_DIR}/external/cppad/include
-            ${CMAKE_BINARY_DIR}/external/cppadcodegen/include)
-target_link_libraries(
-  ungar
-  INTERFACE spdlog::spdlog
-            ${cppad_lib}
-            ${CMAKE_DL_LIBS}
-            Eigen3::Eigen
-            Boost::hana
-            finitediff::finitediff
-            osqp-cpp)
-
-set(UNGAR_CODEGEN_FOLDER "${CMAKE_BINARY_DIR}/ungar_codegen")
-if(UNGAR_RELEASE)
-  target_compile_definitions(
+# ##############################################################################
+# Add compile options.
+# ##############################################################################
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Clang.
+  message(WARNING "Clang is not supported.")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # GNU Compiler Collection (GCC).
+  target_compile_options(
     ungar
-    INTERFACE "UNGAR_CODEGEN_FOLDER=\"${UNGAR_CODEGEN_FOLDER}\""
-    INTERFACE "UNGAR_RELEASE")
+    INTERFACE "-pedantic"
+              "-ftemplate-backtrace-limit=1"
+              "-fconstexpr-depth=2147483647"
+              "-fconstexpr-loop-limit=2147483647"
+              "-fconstexpr-cache-depth=2147483647"
+              "-fconstexpr-ops-limit=2147483647"
+              "$<$<CONFIG:RELEASE>:-O3>")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel") # Intel C++ Compiler.
+  message(WARNING "Intel C++ Compiler is not supported.")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # MSVC.
+  target_compile_options(ungar INTERFACE "/W4" "$<$<CONFIG:RELEASE>:/O2>")
 else()
-  target_compile_definitions(
-    ungar
-    INTERFACE "UNGAR_CODEGEN_FOLDER=\"${UNGAR_CODEGEN_FOLDER}\""
-    INTERFACE "_GLIBCXX_ASSERTIONS")
+  message(WARNING "${CMAKE_CXX_COMPILER_ID} is not supported.")
 endif()
 
-add_executable(function.test test/autodiff/function.test.cpp)
-target_link_libraries(function.test ungar::ungar gtest)
+# ##############################################################################
+# Set Ungar's include directories and link libraries.
+# ##############################################################################
+# Core modules.
+list(APPEND UNGAR_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include")
+list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen Boost::hana)
 
-add_executable(utils.test test/utils/utils.test.cpp)
-target_link_libraries(utils.test ungar::ungar gtest)
+# Optional modules.
+if(UNGAR_ENABLE_LOGGING)
+  list(APPEND UNGAR_LINK_LIBRARIES spdlog::spdlog)
+endif()
+if(UNGAR_ENABLE_AUTODIFF)
+  list(APPEND UNGAR_INCLUDE_DIRECTORIES
+       "${CMAKE_BINARY_DIR}/external/cppad/include"
+       "${CMAKE_BINARY_DIR}/external/cppadcodegen/include")
+  list(APPEND UNGAR_LINK_LIBRARIES ${cppad_lib} ${CMAKE_DL_LIBS}
+       finitediff::finitediff)
+endif()
+if(UNGAR_ENABLE_OPTIMIZATION)
+  list(APPEND UNGAR_LINK_LIBRARIES osqp-cpp)
+endif()
 
-add_executable(variable.test test/variable.test.cpp)
-target_link_libraries(variable.test ungar::ungar gtest)
+target_include_directories(ungar INTERFACE ${UNGAR_INCLUDE_DIRECTORIES})
+target_link_libraries(ungar INTERFACE ${UNGAR_LINK_LIBRARIES})
 
-add_executable(soft_sqp.test test/optimization/soft_sqp.test.cpp)
-target_link_libraries(soft_sqp.test ungar::ungar gtest)
+# ##############################################################################
+# Set Ungar's compile definitions.
+# ##############################################################################
+target_compile_definitions(
+  ungar
+  INTERFACE $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS>
+            $<$<CONFIG:RelWithDebInfo>:_GLIBCXX_ASSERTIONS>
+            $<$<CONFIG:MinSizeRel>:UNGAR_CONFIG_ENABLE_RELEASE_MODE>
+            $<$<CONFIG:Release>:UNGAR_CONFIG_ENABLE_RELEASE_MODE>)
 
-add_executable(variable.example example/variable.example.cpp)
-target_link_libraries(variable.example ungar::ungar)
+if(UNGAR_ENABLE_LOGGING)
+  target_compile_definitions(ungar INTERFACE -DUNGAR_CONFIG_ENABLE_LOGGING)
+endif()
 
-add_executable(variable_map.example example/variable_map.example.cpp)
-target_link_libraries(variable_map.example ungar::ungar)
+if(UNGAR_ENABLE_AUTODIFF)
+  target_compile_definitions(
+    ungar
+    INTERFACE -DUNGAR_CONFIG_ENABLE_AUTODIFF
+    INTERFACE "UNGAR_CODEGEN_FOLDER=\"${CMAKE_BINARY_DIR}/ungar_codegen\"")
+endif()
 
-add_executable(function.example example/autodiff/function.example.cpp)
-target_link_libraries(function.example ungar::ungar)
+if(UNGAR_ENABLE_OPTIMIZATION)
+  target_compile_definitions(ungar INTERFACE -DUNGAR_CONFIG_ENABLE_OPTIMIZATION)
+endif()
+
+# ##############################################################################
+# Add optional targets.
+# ##############################################################################
+if(UNGAR_BUILD_TESTS)
+  add_subdirectory(test)
+endif()
+
+if(UNGAR_BUILD_EXAMPLES)
+  add_subdirectory(example)
+endif()

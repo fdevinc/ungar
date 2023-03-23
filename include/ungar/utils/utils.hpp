@@ -31,13 +31,37 @@
 #include <locale>
 #include <random>
 
-#include <cppad/utility/pow_int.hpp>
-
 #include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
-#include "ungar/io/logging.hpp"
+
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+#include "ungar/autodiff/data_types.hpp"
+#endif
 
 namespace Ungar {
+namespace Concepts {
+
+template <typename _Scalar>
+concept Scalar =
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    std::convertible_to<_Scalar, real_t> || std::convertible_to<_Scalar, ad_scalar_t>;
+#else
+    std::convertible_to<_Scalar, real_t>;
+#endif
+
+}  // namespace Concepts
+
+[[noreturn]] inline void Unreachable() {
+    // Uses compiler specific extensions if possible.
+    // Even if no extension is used, undefined behavior is still raised by
+    // an empty function body and the noreturn attribute.
+#ifdef __GNUC__  // GCC, Clang, ICC
+    __builtin_unreachable();
+#elif defined _MSC_VER  // MSVC
+    __assume(false);
+#endif
+}
+
 namespace Utils {
 
 /**
@@ -460,7 +484,7 @@ inline Internal::ComposeImpl<_ComposableVectors&&...> Compose(
     return {std::forward<_ComposableVectors>(composableVectors)...};
 }
 
-template <Ungar::Concepts::Scalar _Scalar, typename _ComposedVector>
+template <Concepts::Scalar _Scalar, typename _ComposedVector>
 inline auto ComposeIn(const std::vector<RefToConstVectorX<_Scalar>>& vectors,
                       Eigen::MatrixBase<_ComposedVector> const& composedVector)  // clang-format off
 requires std::same_as<typename _ComposedVector::Scalar, _Scalar> {  // clang-format on
@@ -638,77 +662,6 @@ std::filesystem::path TemporaryDirectoryPath(const std::string& directoryNamePre
     return temporaryDirectoryPath;
 }
 
-template <bool _LOWER_TRIANGULAR = false, typename _Matrix>  // clang-format off
-requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpression<_Matrix>) && (!_Matrix::IsRowMajor)
-[[nodiscard]] bool CompareMatrices(const _Matrix& testMatrix,
-                                   std::string_view testEntriesLabel,
-                                   const MatrixXr& groundTruthMatrix,
-                                   std::string_view groundTruthEntriesLabel) {  // clang-format on
-    bool success = true;
-
-    const real_t relativeTolerance = 1e-2;
-    const real_t absoluteTolerance = 1e-3;
-    const real_t epsilon           = 1e-12;
-
-    int mismatchCounter     = 0;
-    const int maxMismatches = 20;
-    for (index_t j = 0_idx; j < groundTruthMatrix.cols(); ++j) {
-        for (index_t i = 0_idx; i < groundTruthMatrix.rows(); ++i) {
-            if constexpr (_LOWER_TRIANGULAR) {
-                if (j > i) {
-                    continue;
-                }
-            }
-
-            const real_t absoluteError = std::abs(groundTruthMatrix(i, j) - testMatrix.coeff(i, j));
-            const real_t relativeError =
-                2.0 * absoluteError /
-                (epsilon + std::abs(groundTruthMatrix(i, j)) + std::abs(testMatrix.coeff(i, j)));
-
-            if ((relativeError > relativeTolerance && absoluteError > absoluteTolerance) ||
-                std::isnan(testMatrix.coeff(i, j)) != std::isnan(groundTruthMatrix(i, j))) {
-                if (success) {
-                    UNGAR_LOG(debug, "Some mismatches were found.");
-                    UNGAR_LOG(debug, "The following mismatches were found.");
-                    UNGAR_LOG(debug,
-                              "{:<10}{:<10}{:<20}{:<20}{:<20}",
-                              "Row",
-                              "Column",
-                              testEntriesLabel,
-                              groundTruthEntriesLabel,
-                              "Error");
-                    success = false;
-                }
-
-                UNGAR_LOG(debug,
-                          "{:<10}{:<10}{:<20.4f}{:<20.4f}{:<10.4f} ({:.4}%)",
-                          i,
-                          j,
-                          testMatrix.coeff(i, j),
-                          groundTruthMatrix(i, j),
-                          absoluteError,
-                          relativeError * 100.0);
-                ++mismatchCounter;
-
-                if (mismatchCounter > maxMismatches) {
-                    const auto etc = "..."sv;
-                    UNGAR_LOG(
-                        debug, "{:<10}{:<10}{:<20}{:<20}{:<10}  {}", etc, etc, etc, etc, etc, etc);
-
-                    UNGAR_LOG(debug, "More than {} mismatches were found.", maxMismatches);
-                    return success;
-                }
-            }
-        }
-    }
-
-    if (success) {
-        UNGAR_LOG(debug, "No mismatches were found.");
-    }
-
-    return success;
-}
-
 template <typename _Derived>
 inline Vector3<typename _Derived::Scalar> EstimateLinearVelocity(
     const Eigen::MatrixBase<_Derived>& position,
@@ -717,7 +670,7 @@ inline Vector3<typename _Derived::Scalar> EstimateLinearVelocity(
     return (position - previousPosition) / stepSize;
 }
 
-template <Ungar::Concepts::Scalar _Scalar = real_t>
+template <Concepts::Scalar _Scalar = real_t>
 inline Vector3<_Scalar> EstimateBodyFrameAngularVelocity(
     const Quaternion<_Scalar>& orientation,
     const Quaternion<_Scalar>& previousOrientation,
@@ -725,7 +678,7 @@ inline Vector3<_Scalar> EstimateBodyFrameAngularVelocity(
     return 2.0 * (previousOrientation.conjugate() * orientation).vec() / stepSize;
 }
 
-template <Ungar::Concepts::Scalar _Scalar = real_t>
+template <Concepts::Scalar _Scalar = real_t>
 inline Vector3<_Scalar> EstimateInertialFrameAngularVelocity(
     const Quaternion<_Scalar>& orientation,
     const Quaternion<_Scalar>& previousOrientation,
@@ -739,7 +692,14 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
     using ScalarType = typename _Vector::Scalar;
     Quaternion<ScalarType> q;
 
-    if constexpr (std::same_as<ScalarType, ad_scalar_t>) {
+    if constexpr (std::convertible_to<ScalarType, real_t>) {
+        const ScalarType vNorm = v.norm();
+        q.vec()                = vNorm > 0.0 ? Vector3<ScalarType>{v * sin(0.5 * vNorm) / vNorm}
+                                             : Vector3<ScalarType>{v * 0.5};
+        q.w()                  = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
+    }
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    else if constexpr (std::convertible_to<ScalarType, ad_scalar_t>) {
         static_assert(dependent_false<ScalarType>,
                       "The 'ExponentialMap' function is not implemented for vectors with scalar "
                       "type 'ad_scalar_t'. Use 'ApproximateExponentialMap' instead.");
@@ -756,11 +716,12 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
         //                CppAD::azmul(vNormIsZero, ad_scalar_t{0.5}));
         // q.w()   = CppAD::azmul(vNormIsNotZero, cos(0.5 * vNorm)) +
         //         CppAD::azmul(vNormIsZero, ad_scalar_t{1.0});
-    } else {
-        const ScalarType vNorm = v.norm();
-        q.vec()                = vNorm > 0.0 ? Vector3<ScalarType>{v * sin(0.5 * vNorm) / vNorm}
-                                             : Vector3<ScalarType>{v * 0.5};
-        q.w()                  = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
+    }
+#endif
+    else {
+        static_assert(dependent_false<ScalarType>,
+                      "The 'ExponentialMap' function is not implemented for vectors with the given "
+                      "scalar type.");
     }
     return q;
 }
@@ -779,31 +740,37 @@ inline Quaternion<typename _Vector::Scalar> ApproximateExponentialMap(
     return q;
 }
 
-template <Ungar::Concepts::Scalar _Scalar>
+template <Concepts::Scalar _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Quaternion<_Scalar>& q) {
     return q.conjugate();
 }
 
-template <Ungar::Concepts::Scalar _Scalar>
+template <Concepts::Scalar _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<const Quaternion<_Scalar>>& q) {
     return q.conjugate();
 }
 
-template <Ungar::Concepts::Scalar _Scalar>
+template <Concepts::Scalar _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<Quaternion<_Scalar>>& q) {
     return q.conjugate();
 }
 
 template <Concepts::Scalar _Base, typename _Exponent>
 inline auto Pow(const _Base base, const _Exponent exponent) {
-    if constexpr (std::same_as<_Base, ad_scalar_t>) {
+    if constexpr (std::convertible_to<_Base, real_t>) {
+        return std::pow(base, exponent);
+    }
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    else if constexpr (std::convertible_to<_Base, ad_scalar_t>) {
         if constexpr (std::integral<_Exponent>) {
             return CppAD::pow(base, static_cast<int>(exponent));
         } else {
             return CppAD::pow(base, exponent);
         }
-    } else {
-        return std::pow(base, exponent);
+    }
+#endif
+    else {
+        Unreachable();
     }
 }
 
@@ -906,8 +873,9 @@ inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
     return q.toRotationMatrix().eulerAngles(2_idx, 1_idx, 0_idx).reverse();
 }
 
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
 template <typename _Quaternion>  // clang-format off
-requires std::same_as<typename _Quaternion::Scalar, ad_scalar_t>
+requires std::convertible_to<typename _Quaternion::Scalar, ad_scalar_t>
 inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
     const Eigen::QuaternionBase<_Quaternion>& q) {  // clang-format on
     const Matrix3<typename _Quaternion::Scalar> R = q.toRotationMatrix();
@@ -917,38 +885,111 @@ inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
                      CppAD::sqrt(Utils::Pow(R(2_idx, 1_idx), 2) + Utils::Pow(R(2_idx, 2_idx), 2))),
         CppAD::atan2(R(1_idx, 0_idx), R(0_idx, 0_idx))};
 }
+#endif
 
-template <typename _Scalar>
+template <Concepts::Scalar _Scalar>
 inline _Scalar Min(const _Scalar& a, const std::type_identity_t<_Scalar>& b) {
-    if constexpr (std::same_as<_Scalar, ad_scalar_t>) {
-        return CppAD::CondExpGt(a, b, b, a);
-    } else {
+    if constexpr (std::convertible_to<_Scalar, real_t>) {
         return std::min(a, b);
+    }
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    else if constexpr (std::convertible_to<_Scalar, ad_scalar_t>) {
+        return CppAD::CondExpGt(a, b, b, a);
+    }
+#endif
+    else {
+        Unreachable();
     }
 }
 
-template <typename _Scalar>
+template <Concepts::Scalar _Scalar>
 inline _Scalar SmoothMin(const _Scalar& a,
                          const std::type_identity_t<_Scalar>& b,
                          const std::type_identity_t<_Scalar>& alpha = _Scalar{8.0}) {
     return (a * exp(-alpha * a) + b * exp(-alpha * b)) / (exp(-alpha * a) + exp(-alpha * b));
 }
 
+template <bool _LOWER_TRIANGULAR = false, typename _Matrix>  // clang-format off
+requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpression<_Matrix>) && (!_Matrix::IsRowMajor)
+[[nodiscard]] bool CompareMatrices(const _Matrix& testMatrix,
+                                   std::string_view testEntriesLabel,
+                                   const MatrixXr& groundTruthMatrix,
+                                   std::string_view groundTruthEntriesLabel) {  // clang-format on
+    bool success = true;
+
+    const real_t relativeTolerance = 1e-2;
+    const real_t absoluteTolerance = 1e-3;
+    const real_t epsilon           = 1e-12;
+
+    int mismatchCounter     = 0;
+    const int maxMismatches = 20;
+    for (index_t j = 0_idx; j < groundTruthMatrix.cols(); ++j) {
+        for (index_t i = 0_idx; i < groundTruthMatrix.rows(); ++i) {
+            if constexpr (_LOWER_TRIANGULAR) {
+                if (j > i) {
+                    continue;
+                }
+            }
+
+            const real_t absoluteError = std::abs(groundTruthMatrix(i, j) - testMatrix.coeff(i, j));
+            const real_t relativeError =
+                2.0 * absoluteError /
+                (epsilon + std::abs(groundTruthMatrix(i, j)) + std::abs(testMatrix.coeff(i, j)));
+
+            if ((relativeError > relativeTolerance && absoluteError > absoluteTolerance) ||
+                std::isnan(testMatrix.coeff(i, j)) != std::isnan(groundTruthMatrix(i, j))) {
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
+                if (success) {
+                    UNGAR_LOG(debug, "Some mismatches were found.");
+                    UNGAR_LOG(debug, "The following mismatches were found.");
+                    UNGAR_LOG(debug,
+                              "{:<10}{:<10}{:<20}{:<20}{:<20}",
+                              "Row",
+                              "Column",
+                              testEntriesLabel,
+                              groundTruthEntriesLabel,
+                              "Error");
+                    success = false;
+                }
+
+                UNGAR_LOG(debug,
+                          "{:<10}{:<10}{:<20.4f}{:<20.4f}{:<10.4f} ({:.4}%)",
+                          i,
+                          j,
+                          testMatrix.coeff(i, j),
+                          groundTruthMatrix(i, j),
+                          absoluteError,
+                          relativeError * 100.0);
+                ++mismatchCounter;
+
+                if (mismatchCounter > maxMismatches) {
+                    const auto etc = "..."sv;
+                    UNGAR_LOG(
+                        debug, "{:<10}{:<10}{:<20}{:<20}{:<10}  {}", etc, etc, etc, etc, etc, etc);
+
+                    UNGAR_LOG(debug, "More than {} mismatches were found.", maxMismatches);
+                    return success;
+                }
+#else
+                return false;
+#endif
+            }
+        }
+    }
+
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
+    if (success) {
+        UNGAR_LOG(debug, "No mismatches were found.");
+    }
+#endif
+
+    return success;
+}
+
 }  // namespace Utils
 
 using Utils::Q;
 using Utils::Q_c;
-
-[[noreturn]] inline void Unreachable() {
-    // Uses compiler specific extensions if possible.
-    // Even if no extension is used, undefined behavior is still raised by
-    // an empty function body and the noreturn attribute.
-#ifdef __GNUC__  // GCC, Clang, ICC
-    __builtin_unreachable();
-#elif defined _MSC_VER  // MSVC
-    __assume(false);
-#endif
-}
 
 }  // namespace Ungar
 

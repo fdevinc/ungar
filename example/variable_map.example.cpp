@@ -67,6 +67,9 @@ int main() {
     vars.Get(u, 0).setZero();                        // [ X  0000   u1   ...  uN-1 ]
     vars.Get(u, 1).setOnes();                        // [ X  0000  1111  ...  uN-1 ]
     vars.Get(u, N - 1).setLinSpaced(2.0, 8.0);       // [ X  0000  1111  ...  2468 ]
+    UNGAR_LOG(info, "u0 = {}", vars.Get(u, 0));
+    UNGAR_LOG(info, "u1 = {}", vars.Get(u, 1));
+    UNGAR_LOG(info, "uN-1 = {}", vars.Get(u, N - 1));
 
     static_assert(std::same_as<decltype(vars.Get(rotor_speed, 0, 0)), real_t&>);
     static_assert(std::same_as<decltype(vars.Get(position, 0)), Eigen::Map<Vector3r>&>);

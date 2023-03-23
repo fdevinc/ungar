@@ -27,9 +27,13 @@
 #ifndef _UNGAR__ASSERT_HPP_
 #define _UNGAR__ASSERT_HPP_
 
+#include <cstdio>
+#include <cstdlib>
 #include <source_location>
 
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
 #include "ungar/io/logging.hpp"
+#endif
 
 namespace Ungar {
 
@@ -43,12 +47,21 @@ inline constexpr long expect(long exp, long c) {
 
 inline void assertion_failed(
     char const* expr, const std::source_location location = std::source_location::current()) {
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
     UNGAR_LOG(error,
               "{}:{}: {}: Assertion `{}` failed.",
               location.file_name(),
               location.line(),
               location.function_name(),
               expr);
+#else
+    std::fprintf(stderr,
+                 "%s:%u: %s: Assertion `%s` failed.",
+                 location.file_name(),
+                 location.line(),
+                 location.function_name(),
+                 expr);
+#endif
     std::abort();
 }
 
@@ -56,6 +69,7 @@ inline void assertion_failed_msg(
     char const* expr,
     char const* msg,
     const std::source_location location = std::source_location::current()) {
+#ifdef UNGAR_CONFIG_ENABLE_LOGGING
     UNGAR_LOG(error,
               "{}:{}: {}: Assertion `{} && \"{}\"` failed.",
               location.file_name(),
@@ -63,6 +77,15 @@ inline void assertion_failed_msg(
               location.function_name(),
               expr,
               msg);
+#else
+    std::fprintf(stderr,
+                 "%s:%u: %s: Assertion `%s && \"%s\"` failed.",
+                 location.file_name(),
+                 location.line(),
+                 location.function_name(),
+                 expr,
+                 msg);
+#endif
     std::abort();
 }
 
@@ -71,7 +94,7 @@ inline void assertion_failed_msg(
 #define UNGAR_LIKELY(x) ::Ungar::expect(x, 1)
 #define UNGAR_UNLIKELY(x) ::Ungar::expect(x, 0)
 
-#ifdef UNGAR_RELEASE
+#ifdef UNGAR_CONFIG_ENABLE_RELEASE_MODE
 #define UNGAR_ASSERT(expr) ((void)0)
 #define UNGAR_ASSERT_MSG(expr, msg) ((void)0)
 #define UNGAR_ASSERT_EXPLICIT(expr) ((void)0)

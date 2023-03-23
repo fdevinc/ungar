@@ -27,8 +27,6 @@
 #ifndef _UNGAR__AUTODIFF__FUNCTION_HPP_
 #define _UNGAR__AUTODIFF__FUNCTION_HPP_
 
-#include <span>
-
 #include <finitediff.hpp>
 
 #include "ungar/autodiff/data_types.hpp"

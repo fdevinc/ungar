@@ -29,9 +29,6 @@
 
 #include <ranges>
 
-#include <cppad/cg.hpp>
-#include <cppad/cg/support/cppadcg_eigen.hpp>
-
 #include "Eigen/Geometry"
 #include "Eigen/Sparse"
 
@@ -90,10 +87,6 @@ using namespace std::literals;
 using namespace hana::literals;
 
 using real_t = double;
-
-using ADCG        = CppAD::cg::CG<real_t>;
-using ADFun       = CppAD::ADFun<ADCG>;
-using ad_scalar_t = CppAD::AD<ADCG>;
 
 using index_t     = Eigen::Index;
 using time_step_t = index_t;
@@ -182,9 +175,6 @@ concept HanaStruct = hana::Struct<_HanaStruct>::value;
 template <typename _HanaOptional>
 concept HanaOptional = std::same_as<hana::tag_of_t<_HanaOptional>, hana::optional_tag>;
 
-template <typename _Scalar>
-concept Scalar = AnyOf<_Scalar, real_t, ad_scalar_t>;
-
 // clang-format off
 template <typename _ForwardRangeOf, typename _T>
 concept ForwardRangeOf = std::ranges::forward_range<_ForwardRangeOf> &&
@@ -252,7 +242,6 @@ concept SpecializationOf = is_specialization_of_v<_T, _TemplateType>;
     _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, Eigen::Dynamic, X)
 
 UNGAR_MAKE_EIGEN_TYPEDEFS(real_t, r);
-UNGAR_MAKE_EIGEN_TYPEDEFS(ad_scalar_t, ad);
 #undef UNGAR_MAKE_EIGEN_TYPEDEFS
 #undef _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL
 
@@ -323,27 +312,22 @@ template <typename _Scalar>
 using SparseMatrix = Eigen::SparseMatrix<_Scalar>;
 
 template <typename _Scalar>
-using Quaternion   = Eigen::Quaternion<_Scalar>;
-using Quaternionr  = Eigen::Quaternion<real_t>;
-using Quaternionad = Eigen::Quaternion<ad_scalar_t>;
+using Quaternion  = Eigen::Quaternion<_Scalar>;
+using Quaternionr = Eigen::Quaternion<real_t>;
 template <typename _Scalar>
-using MapToQuaternion   = Eigen::Map<Eigen::Quaternion<_Scalar>>;
-using MapToQuaternionr  = Eigen::Map<Eigen::Quaternion<real_t>>;
-using MapToQuaternionad = Eigen::Map<Eigen::Quaternion<ad_scalar_t>>;
+using MapToQuaternion  = Eigen::Map<Eigen::Quaternion<_Scalar>>;
+using MapToQuaternionr = Eigen::Map<Eigen::Quaternion<real_t>>;
 template <typename _Scalar>
-using MapToConstQuaternion   = Eigen::Map<const Eigen::Quaternion<_Scalar>>;
-using MapToConstQuaternionr  = Eigen::Map<const Eigen::Quaternion<real_t>>;
-using MapToConstQuaternionad = Eigen::Map<const Eigen::Quaternion<ad_scalar_t>>;
+using MapToConstQuaternion  = Eigen::Map<const Eigen::Quaternion<_Scalar>>;
+using MapToConstQuaternionr = Eigen::Map<const Eigen::Quaternion<real_t>>;
 
 template <typename _Scalar>
-using AngleAxis   = Eigen::AngleAxis<_Scalar>;
-using AngleAxisr  = Eigen::AngleAxis<real_t>;
-using AngleAxisad = Eigen::AngleAxis<ad_scalar_t>;
+using AngleAxis  = Eigen::AngleAxis<_Scalar>;
+using AngleAxisr = Eigen::AngleAxis<real_t>;
 
 template <typename _Scalar>
-using Rotation2D   = Eigen::Rotation2D<_Scalar>;
-using Rotation2Dr  = Eigen::Rotation2D<real_t>;
-using Rotation2Dad = Eigen::Rotation2D<ad_scalar_t>;
+using Rotation2D  = Eigen::Rotation2D<_Scalar>;
+using Rotation2Dr = Eigen::Rotation2D<real_t>;
 
 inline namespace Literals {
 

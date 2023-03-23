@@ -120,7 +120,7 @@ int main() {
     };
 
     UNGAR_LOG(info,
-              "Printing all subvariables of 'x' with the format { name, index, size, kind }...");
+              "Printing all subvariables of 'x' with the format {{ name, index, size, kind }}...");
     x.ForEach([&](Concepts::Variable auto var) {
         UNGAR_LOG(
             info, "{:c}", VariableInfo{var.Name().c_str(), var.Index(), var.Size(), getKind(var)});

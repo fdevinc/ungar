@@ -29,9 +29,56 @@
 
 #include <unordered_set>
 
+#include <cppad/cg.hpp>
+#include <cppad/cg/support/cppadcg_eigen.hpp>
+
 #include "ungar/data_types.hpp"
 
 namespace Ungar {
+
+using ADCG        = CppAD::cg::CG<real_t>;
+using ADFun       = CppAD::ADFun<ADCG>;
+using ad_scalar_t = CppAD::AD<ADCG>;
+
+#define _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, SIZE, SizeSuffix)                     \
+    using Matrix##SizeSuffix##TypeSuffix    = Eigen::Matrix<Type, SIZE, SIZE>;                  \
+    using Vector##SizeSuffix##TypeSuffix    = Eigen::Matrix<Type, SIZE, 1>;                     \
+    using RowVector##SizeSuffix##TypeSuffix = Eigen::Matrix<Type, 1, SIZE>;                     \
+                                                                                                \
+    using RefToMatrix##SizeSuffix##TypeSuffix    = Eigen::Ref<Eigen::Matrix<Type, SIZE, SIZE>>; \
+    using RefToVector##SizeSuffix##TypeSuffix    = Eigen::Ref<Eigen::Matrix<Type, SIZE, 1>>;    \
+    using RefToRowVector##SizeSuffix##TypeSuffix = Eigen::Ref<Eigen::Matrix<Type, 1, SIZE>>;    \
+    using RefToConstMatrix##SizeSuffix##TypeSuffix =                                            \
+        Eigen::Ref<const Eigen::Matrix<Type, SIZE, SIZE>>;                                      \
+    using RefToConstVector##SizeSuffix##TypeSuffix =                                            \
+        Eigen::Ref<const Eigen::Matrix<Type, SIZE, 1>>;                                         \
+    using RefToConstRowVector##SizeSuffix##TypeSuffix =                                         \
+        Eigen::Ref<const Eigen::Matrix<Type, 1, SIZE>>;                                         \
+                                                                                                \
+    using MapToMatrix##SizeSuffix##TypeSuffix    = Eigen::Map<Eigen::Matrix<Type, SIZE, SIZE>>; \
+    using MapToVector##SizeSuffix##TypeSuffix    = Eigen::Map<Eigen::Matrix<Type, SIZE, 1>>;    \
+    using MapToRowVector##SizeSuffix##TypeSuffix = Eigen::Map<Eigen::Matrix<Type, 1, SIZE>>;    \
+    using MapToConstMatrix##SizeSuffix##TypeSuffix =                                            \
+        Eigen::Map<const Eigen::Matrix<Type, SIZE, SIZE>>;                                      \
+    using MapToConstVector##SizeSuffix##TypeSuffix =                                            \
+        Eigen::Map<const Eigen::Matrix<Type, SIZE, 1>>;                                         \
+    using MapToConstRowVector##SizeSuffix##TypeSuffix =                                         \
+        Eigen::Map<const Eigen::Matrix<Type, 1, SIZE>>
+#define UNGAR_MAKE_EIGEN_TYPEDEFS(Type, TypeSuffix)          \
+    _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, 2, 2); \
+    _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, 3, 3); \
+    _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, 4, 4); \
+    _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, Eigen::Dynamic, X)
+
+UNGAR_MAKE_EIGEN_TYPEDEFS(ad_scalar_t, ad);
+#undef UNGAR_MAKE_EIGEN_TYPEDEFS
+#undef _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL
+
+using Quaternionad           = Eigen::Quaternion<ad_scalar_t>;
+using MapToQuaternionad      = Eigen::Map<Eigen::Quaternion<ad_scalar_t>>;
+using MapToConstQuaternionad = Eigen::Map<const Eigen::Quaternion<ad_scalar_t>>;
+using AngleAxisad            = Eigen::AngleAxis<ad_scalar_t>;
+using Rotation2Dad           = Eigen::Rotation2D<ad_scalar_t>;
 
 /**
  * @brief An AD function f computes the value of a dependent variable
