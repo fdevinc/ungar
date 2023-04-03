@@ -5,7 +5,6 @@
 ## Overview
 ```cpp
 #include "ungar/variable_map.hpp"
-#include "ungar/autodiff/function.hpp"
 using namespace Ungar;
 
 int main() {
