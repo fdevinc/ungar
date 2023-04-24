@@ -38,8 +38,8 @@ class VariableLazyMap {
   private:
     template <typename _Underlying>
     static constexpr auto UnderlyingSize(hana::basic_type<_Underlying>) {
-        if constexpr (std::same_as<std::remove_cvref_t<_Underlying>, VectorX<_Scalar>>) {
-            return Eigen::Dynamic;
+        if constexpr (Concepts::DenseMatrixExpression<_Underlying>) {
+            return std::remove_cvref_t<_Underlying>::RowsAtCompileTime;
         } else {
             return static_cast<index_t>(std::ranges::size(_Underlying{}));
         }

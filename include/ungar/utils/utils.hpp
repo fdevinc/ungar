@@ -314,7 +314,7 @@ namespace Concepts {
 
 template <typename _ComposableVector>
 concept ComposableVector = Ungar::Concepts::DenseMatrixExpression<_ComposableVector> ||
-    Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
+                           Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
 
 }  // namespace Concepts
 
@@ -633,8 +633,8 @@ inline Internal::MutableVectorSegmenter<_Scalar> VectorSegmenter(_Scalar* const 
     return {begin};
 }
 
-std::filesystem::path TemporaryDirectoryPath(const std::string& directoryNamePrefix = ""s,
-                                             const size_t maxAttempts               = 1024UL) {
+inline std::filesystem::path TemporaryDirectoryPath(const std::string& directoryNamePrefix = ""s,
+                                                    const size_t maxAttempts = 1024UL) {
     const auto tmp = std::filesystem::temp_directory_path();
 
     std::random_device r;
@@ -695,8 +695,8 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
     if constexpr (std::convertible_to<ScalarType, real_t>) {
         const ScalarType vNorm = v.norm();
         q.vec()                = vNorm > 0.0 ? Vector3<ScalarType>{v * sin(0.5 * vNorm) / vNorm}
-                                             : Vector3<ScalarType>{v * 0.5};
-        q.w()                  = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
+                              : Vector3<ScalarType>{v * 0.5};
+        q.w() = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
     }
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
     else if constexpr (std::convertible_to<ScalarType, ad_scalar_t>) {
