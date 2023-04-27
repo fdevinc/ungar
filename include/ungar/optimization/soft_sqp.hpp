@@ -36,7 +36,6 @@
 
 namespace Ungar {
 
-template <Concepts::NLPProblem _NLPProblem = NLPProblem<>>
 class SoftSQPOptimizer {
   public:
     SoftSQPOptimizer(const bool verbose,
@@ -53,15 +52,9 @@ class SoftSQPOptimizer {
         _osqpSettings.polish  = polish;
     }
 
-    void Initialize(std::unique_ptr<_NLPProblem> nlpProblem) {
-        _nlpProblem = std::move(nlpProblem);
-        _softInequalityCnstrs =
-            std::make_unique<Autodiff::Function>(MakeSoftInequalityConstraintFunction());
-    }
-
-    RefToConstVectorXr Optimize(const VectorXr& xp) {
-        UNGAR_ASSERT(xp.size() == _nlpProblem->objective.IndependentVariableSize() +
-                                      _nlpProblem->objective.ParameterSize());
+    RefToConstVectorXr Optimize(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+        UNGAR_ASSERT(xp.size() == nlpProblem.objective.IndependentVariableSize() +
+                                      nlpProblem.objective.ParameterSize());
 
         VectorXr xpHelper = xp;
         _cache.xp         = xp;
@@ -71,35 +64,33 @@ class SoftSQPOptimizer {
                 UNGAR_LOG(trace, "Starting soft SQP iteration {}...", i);
             }
             const real_t objective =
-                FunctionInterface::Invoke(_nlpProblem->objective, _cache.xp)[0_idx];
+                FunctionInterface::Invoke(nlpProblem.objective, _cache.xp)[0_idx];
 
-            SolveLocalQPProblem(_cache.xp);
+            SolveLocalQPProblem(nlpProblem, _cache.xp);
             const bool accepted = BacktrackingLineSearch{_osqpSettings.verbose}.Do(
-                FunctionInterface::Jacobian(_nlpProblem->objective, _cache.xp)
-                    .toDense()
-                    .transpose(),
+                FunctionInterface::Jacobian(nlpProblem.objective, _cache.xp).toDense().transpose(),
                 _osqpSolver.primal_solution(),
                 [&](const RefToConstVectorXr& x) -> real_t {
                     xpHelper.head(x.size()) = x;
-                    return FunctionInterface::Invoke(_nlpProblem->objective, xpHelper)[0_idx] +
-                           EvaluateSoftInequalityConstraints(xpHelper);
+                    return FunctionInterface::Invoke(nlpProblem.objective, xpHelper)[0_idx] +
+                           EvaluateSoftInequalityConstraints(nlpProblem, xpHelper);
                 },
                 [&](const RefToConstVectorXr& x) -> real_t {
                     xpHelper.head(x.size()) = x;
 
                     real_t constraintViolation =
-                        FunctionInterface::Invoke(_nlpProblem->equalityConstraints, xpHelper)
+                        FunctionInterface::Invoke(nlpProblem.equalityConstraints, xpHelper)
                             .squaredNorm();
 
                     return _constraintViolationMultiplier * std::sqrt(constraintViolation);
                 },
-                _cache.xp.head(_nlpProblem->objective.IndependentVariableSize()));
+                _cache.xp.head(nlpProblem.objective.IndependentVariableSize()));
             if (!accepted) {
                 break;
             }
 
             const real_t updatedObjective =
-                FunctionInterface::Invoke(_nlpProblem->objective, _cache.xp)[0_idx];
+                FunctionInterface::Invoke(nlpProblem.objective, _cache.xp)[0_idx];
             const real_t objectiveDifference = updatedObjective - objective;
             if (objectiveDifference < 0.0 && std::abs(objectiveDifference) < 1e-6) {
                 if (_osqpSettings.verbose) {
@@ -109,30 +100,31 @@ class SoftSQPOptimizer {
             }
         }
 
-        return _cache.xp.head(_nlpProblem->objective.IndependentVariableSize());
+        return _cache.xp.head(nlpProblem.objective.IndependentVariableSize());
     }
 
   private:
-    void AssembleOSQPInstance(const VectorXr& xp) {
+    void AssembleOSQPInstance(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
         // Regularized objective matrix.
         _osqpInstance.objective_matrix =
-            SparseMatrix<real_t>{_nlpProblem->objective.Hessian(0_idx, xp)} +
-            SoftInequalityConstraintsHessianApproximation(xp) +
+            SparseMatrix<real_t>{nlpProblem.objective.Hessian(0_idx, xp)} +
+            SoftInequalityConstraintsHessianApproximation(nlpProblem, xp) +
             SparseMatrix<real_t>{
-                VectorXr::Constant(_nlpProblem->objective.IndependentVariableSize(), 1e-6)
+                VectorXr::Constant(nlpProblem.objective.IndependentVariableSize(), 1e-6)
                     .asDiagonal()};
-        _osqpInstance.objective_vector = _nlpProblem->objective.Jacobian(xp).transpose().toDense() +
-                                         SoftInequalityConstraintsJacobian(xp).transpose();
+        _osqpInstance.objective_vector =
+            nlpProblem.objective.Jacobian(xp).transpose().toDense() +
+            SoftInequalityConstraintsJacobian(nlpProblem, xp).transpose();
 
-        _osqpInstance.constraint_matrix = _nlpProblem->equalityConstraints.Jacobian(xp);
-        _osqpInstance.lower_bounds =
-            -FunctionInterface::Invoke(_nlpProblem->equalityConstraints, xp);
-        _osqpInstance.upper_bounds =
-            -FunctionInterface::Invoke(_nlpProblem->equalityConstraints, xp);
+        _osqpInstance.constraint_matrix = nlpProblem.equalityConstraints.Jacobian(xp);
+        _osqpInstance.lower_bounds = -FunctionInterface::Invoke(nlpProblem.equalityConstraints, xp);
+        _osqpInstance.upper_bounds = -FunctionInterface::Invoke(nlpProblem.equalityConstraints, xp);
     }
 
-    void InitializeImpl(const VectorXr& xp) {
-        AssembleOSQPInstance(xp);
+    void InitializeImpl(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+        _softInequalityCnstrs =
+            std::make_unique<Autodiff::Function>(MakeSoftInequalityConstraintFunction(nlpProblem));
+        AssembleOSQPInstance(nlpProblem, xp);
 
         UNGAR_ASSERT(_osqpInstance.objective_matrix.cols() ==
                      _osqpInstance.constraint_matrix.cols());
@@ -151,11 +143,11 @@ class SoftSQPOptimizer {
         }
     }
 
-    void SolveLocalQPProblem(const VectorXr& xp) {
+    void SolveLocalQPProblem(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
         if (!_osqpSolver.IsInitialized()) {
-            InitializeImpl(xp);
+            InitializeImpl(nlpProblem, xp);
         } else {
-            AssembleOSQPInstance(xp);
+            AssembleOSQPInstance(nlpProblem, xp);
         }
 
         auto status = _osqpSolver.UpdateObjectiveAndConstraintMatrices(
@@ -201,7 +193,8 @@ class SoftSQPOptimizer {
         }
     }
 
-    Autodiff::Function MakeSoftInequalityConstraintFunction() const {
+    Autodiff::Function MakeSoftInequalityConstraintFunction(
+        const Concepts::NLPProblem auto& nlpProblem) const {
         auto Zsoft = [&](const VectorXad& variables, VectorXad& Zsoft) -> void {
             Zsoft.resize(1_idx);
             Zsoft << SoftInequalityConstraint{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
@@ -210,34 +203,35 @@ class SoftSQPOptimizer {
 
         std::string softIneqModelName = Utils::ToSnakeCase(
             "soft_sqp_soft_ineq_sz_"s +
-            std::to_string(_nlpProblem->inequalityConstraints.DependentVariableSize()) + "_k_" +
+            std::to_string(nlpProblem.inequalityConstraints.DependentVariableSize()) + "_k_" +
             std::to_string(_stiffness) + "_eps_" + std::to_string(_epsilon));
         return Autodiff::MakeFunction({Zsoft,
-                                       _nlpProblem->inequalityConstraints.DependentVariableSize(),
+                                       nlpProblem.inequalityConstraints.DependentVariableSize(),
                                        0_idx,
                                        softIneqModelName,
                                        EnabledDerivatives::ALL},
                                       false);
     }
 
-    real_t EvaluateSoftInequalityConstraints(const VectorXr& xp) {
-        const VectorXr Zineq{FunctionInterface::Invoke(_nlpProblem->inequalityConstraints, xp)};
+    real_t EvaluateSoftInequalityConstraints(const Concepts::NLPProblem auto& nlpProblem,
+                                             const VectorXr& xp) {
+        const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
 
         return (*_softInequalityCnstrs)(Zineq)[0_idx];
     }
 
-    RowVectorXr SoftInequalityConstraintsJacobian(const VectorXr& xp) {
-        const VectorXr Zineq{FunctionInterface::Invoke(_nlpProblem->inequalityConstraints, xp)};
-        const auto ineqJacobian =
-            FunctionInterface::Jacobian(_nlpProblem->inequalityConstraints, xp);
+    RowVectorXr SoftInequalityConstraintsJacobian(const Concepts::NLPProblem auto& nlpProblem,
+                                                  const VectorXr& xp) {
+        const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
+        const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 
         return _softInequalityCnstrs->Jacobian(Zineq) * ineqJacobian;
     }
 
-    Eigen::SparseMatrix<real_t> SoftInequalityConstraintsHessianApproximation(const VectorXr& xp) {
-        const VectorXr Zineq{FunctionInterface::Invoke(_nlpProblem->inequalityConstraints, xp)};
-        const auto ineqJacobian =
-            FunctionInterface::Jacobian(_nlpProblem->inequalityConstraints, xp);
+    Eigen::SparseMatrix<real_t> SoftInequalityConstraintsHessianApproximation(
+        const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+        const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
+        const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 
         return ineqJacobian.transpose() * _softInequalityCnstrs->Hessian(0_idx, Zineq) *
                ineqJacobian;
@@ -246,8 +240,6 @@ class SoftSQPOptimizer {
     osqp::OsqpInstance _osqpInstance;
     osqp::OsqpSolver _osqpSolver;
     osqp::OsqpSettings _osqpSettings;
-
-    std::unique_ptr<_NLPProblem> _nlpProblem;
 
     real_t _constraintViolationMultiplier;
     index_t _maxIterations;

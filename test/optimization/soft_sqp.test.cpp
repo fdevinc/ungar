@@ -67,11 +67,9 @@ TEST(OptimizationTest, SoftSQP) {
     auto nlpProblem1 = MakeNLPProblem(MakeFunction(objBlueprint, true),
                                       hana::nothing,
                                       hana::just(MakeFunction(ineqsBlueprint1, true)));
-    SoftSQPOptimizer<decltype(nlpProblem1)::element_type> optimizer1{
-        false, 1.0, 100_idx, 100.0, 2e-8};
-    optimizer1.Initialize(std::move(nlpProblem1));
+    SoftSQPOptimizer optimizer1{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt1 = optimizer1.Optimize(VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt1 = optimizer1.Optimize(*nlpProblem1, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth1{{3.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 1");
@@ -94,11 +92,9 @@ TEST(OptimizationTest, SoftSQP) {
     auto nlpProblem2 = MakeNLPProblem(MakeFunction(objBlueprint, false),
                                       hana::nothing,
                                       hana::just(MakeFunction(ineqsBlueprint2, true)));
-    SoftSQPOptimizer<decltype(nlpProblem2)::element_type> optimizer2{
-        false, 1.0, 100_idx, 100.0, 2e-8};
-    optimizer2.Initialize(std::move(nlpProblem2));
+    SoftSQPOptimizer optimizer2{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt2 = optimizer2.Optimize(VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt2 = optimizer2.Optimize(*nlpProblem2, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth2{{2.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 2");
@@ -111,11 +107,9 @@ TEST(OptimizationTest, SoftSQP) {
     auto nlpProblem3 = MakeNLPProblem(MakeFunction(objBlueprint, false),
                                       hana::just(MakeFunction(eqsBlueprint, true)),
                                       hana::just(MakeFunction(ineqsBlueprint2, false)));
-    SoftSQPOptimizer<decltype(nlpProblem3)::element_type> optimizer3{
-        false, 1.0, 100_idx, 100.0, 2e-8};
-    optimizer3.Initialize(std::move(nlpProblem3));
+    SoftSQPOptimizer optimizer3{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt3 = optimizer3.Optimize(VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt3 = optimizer3.Optimize(*nlpProblem3, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth3{{1.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 3");

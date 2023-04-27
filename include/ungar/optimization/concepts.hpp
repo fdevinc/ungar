@@ -94,9 +94,10 @@ class IdleTwiceDifferentiableFunction {
         : _independentVariableSize{independentVariableSize}, _parameterSize{parameterSize} {
     }
 
+    // clang-format off
     template <typename _XP>
     VectorX<typename _XP::Scalar> operator()(
-        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {  // clang-format on
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
 
         using ScalarType = typename _XP::Scalar;
@@ -104,16 +105,17 @@ class IdleTwiceDifferentiableFunction {
     }
 
     template <typename _XP, typename _Y>
-    requires std::same_as<typename _XP::Scalar, typename _Y::Scalar>
-    void Evaluate([[maybe_unused]] const Eigen::MatrixBase<_XP>& xp,
-                  [[maybe_unused]] Eigen::MatrixBase<_Y> const& y) const {
+    requires std::same_as<typename _XP::Scalar, typename _Y::Scalar> void Evaluate(
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp,
+        [[maybe_unused]] Eigen::MatrixBase<_Y> const& y) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
         UNGAR_ASSERT(y.size() == 0_idx);
     }
 
+    // clang-format off
     template <typename _XP>
     SparseMatrix<typename _XP::Scalar> Jacobian(
-        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {
+        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp) const {  // clang-format on
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
 
         using ScalarType = typename _XP::Scalar;
@@ -174,12 +176,14 @@ namespace Concepts {
 template <typename _NLPProblem>
 concept NLPProblem = is_nlp_problem_v<_NLPProblem>;
 
+// clang-format off
 template <typename _NLPOptimizer, typename _NLPProblem, typename _XP>
-concept NLPOptimizer = NLPProblem<_NLPProblem> &&
-    requires(_NLPOptimizer optimizer, std::unique_ptr<_NLPProblem> nlp, Eigen::MatrixBase<_XP> xp) {
-    { optimizer.Initialize(std::move(nlp)) } -> std::same_as<void>;
-    { optimizer.Optimize(xp) } -> Ungar::Concepts::DenseMatrixExpression;
+concept NLPOptimizer = NLPProblem<_NLPProblem> && requires(_NLPOptimizer optimizer,
+                                                           _NLPProblem nlp,
+                                                           Eigen::MatrixBase<_XP> xp) {
+    { optimizer.Optimize(nlp, xp) } -> Ungar::Concepts::DenseMatrixExpression;
 };
+// clang-format on
 
 }  // namespace Concepts
 
@@ -188,10 +192,10 @@ inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
                            Ungar::Concepts::HanaOptional auto optionalEqs,
                            Ungar::Concepts::HanaOptional auto optionalIneqs) {
     using Objective             = decltype(obj);
-    using EqualityConstraints   = std::remove_cvref_t<decltype(optionalEqs.value_or(
-        std::declval<IdleTwiceDifferentiableFunction>()))>;
-    using InequalityConstraints = std::remove_cvref_t<decltype(optionalIneqs.value_or(
-        std::declval<IdleTwiceDifferentiableFunction>()))>;
+    using EqualityConstraints   = std::remove_cvref_t<decltype(
+        optionalEqs.value_or(std::declval<IdleTwiceDifferentiableFunction>()))>;
+    using InequalityConstraints = std::remove_cvref_t<decltype(
+        optionalIneqs.value_or(std::declval<IdleTwiceDifferentiableFunction>()))>;
     using NLPProblemType = NLPProblem<_XP, Objective, EqualityConstraints, InequalityConstraints>;
 
     const index_t independentVariableSize = obj.IndependentVariableSize();
