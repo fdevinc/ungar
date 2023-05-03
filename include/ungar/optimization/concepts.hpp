@@ -189,24 +189,76 @@ concept NLPOptimizer = NLPProblem<_NLPProblem> && requires(_NLPOptimizer optimiz
 
 template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
 inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                           Ungar::Concepts::HanaOptional auto optionalEqs,
-                           Ungar::Concepts::HanaOptional auto optionalIneqs) {
+                           decltype(hana::nothing),
+                           decltype(hana::nothing)) {
     using Objective             = decltype(obj);
-    using EqualityConstraints   = std::remove_cvref_t<decltype(
-        optionalEqs.value_or(std::declval<IdleTwiceDifferentiableFunction>()))>;
-    using InequalityConstraints = std::remove_cvref_t<decltype(
-        optionalIneqs.value_or(std::declval<IdleTwiceDifferentiableFunction>()))>;
+    using EqualityConstraints   = IdleTwiceDifferentiableFunction;
+    using InequalityConstraints = IdleTwiceDifferentiableFunction;
     using NLPProblemType = NLPProblem<_XP, Objective, EqualityConstraints, InequalityConstraints>;
 
     const index_t independentVariableSize = obj.IndependentVariableSize();
     const index_t parameterSize           = obj.ParameterSize();
 
-    return std::make_unique<NLPProblemType>(
-        std::move(obj),
-        std::move(optionalEqs)
-            .value_or(IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}),
-        std::move(optionalIneqs)
-            .value_or(IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}));
+    return NLPProblemType{
+        .objective = std::move(obj),
+        .equalityConstraints =
+            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
+        .inequalityConstraints =
+            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}};
+}
+
+template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
+inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
+                           Concepts::DifferentiableFunction<_XP> auto eqs,
+                           decltype(hana::nothing)) {
+    using Objective             = decltype(obj);
+    using EqualityConstraints   = decltype(eqs);
+    using InequalityConstraints = IdleTwiceDifferentiableFunction;
+    using NLPProblemType = NLPProblem<_XP, Objective, EqualityConstraints, InequalityConstraints>;
+
+    const index_t independentVariableSize = obj.IndependentVariableSize();
+    const index_t parameterSize           = obj.ParameterSize();
+
+    return NLPProblemType{.objective             = std::move(obj),
+                          .equalityConstraints   = std::move(eqs),
+                          .inequalityConstraints = IdleTwiceDifferentiableFunction{
+                              independentVariableSize, parameterSize}};
+}
+
+template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
+inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
+                           decltype(hana::nothing),
+                           Concepts::DifferentiableFunction<_XP> auto ineqs) {
+    using Objective             = decltype(obj);
+    using EqualityConstraints   = IdleTwiceDifferentiableFunction;
+    using InequalityConstraints = decltype(ineqs);
+    using NLPProblemType = NLPProblem<_XP, Objective, EqualityConstraints, InequalityConstraints>;
+
+    const index_t independentVariableSize = obj.IndependentVariableSize();
+    const index_t parameterSize           = obj.ParameterSize();
+
+    return NLPProblemType{
+        .objective = std::move(obj),
+        .equalityConstraints =
+            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
+        .inequalityConstraints = std::move(ineqs)};
+}
+
+template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
+inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
+                           Concepts::DifferentiableFunction<_XP> auto eqs,
+                           Concepts::DifferentiableFunction<_XP> auto ineqs) {
+    using Objective             = decltype(obj);
+    using EqualityConstraints   = decltype(eqs);
+    using InequalityConstraints = decltype(ineqs);
+    using NLPProblemType = NLPProblem<_XP, Objective, EqualityConstraints, InequalityConstraints>;
+
+    const index_t independentVariableSize = obj.IndependentVariableSize();
+    const index_t parameterSize           = obj.ParameterSize();
+
+    return NLPProblemType{.objective             = std::move(obj),
+                          .equalityConstraints   = std::move(eqs),
+                          .inequalityConstraints = std::move(ineqs)};
 }
 
 struct FunctionInterface {

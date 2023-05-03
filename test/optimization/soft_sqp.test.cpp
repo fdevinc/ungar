@@ -64,12 +64,11 @@ TEST(OptimizationTest, SoftSQP) {
                             pSize,
                             "ineqs_1_soft_sqp_test"sv,
                             EnabledDerivatives::JACOBIAN};
-    auto nlpProblem1 = MakeNLPProblem(MakeFunction(objBlueprint, true),
-                                      hana::nothing,
-                                      hana::just(MakeFunction(ineqsBlueprint1, true)));
+    auto nlpProblem1 = MakeNLPProblem(
+        MakeFunction(objBlueprint, true), hana::nothing, MakeFunction(ineqsBlueprint1, true));
     SoftSQPOptimizer optimizer1{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt1 = optimizer1.Optimize(*nlpProblem1, VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt1 = optimizer1.Optimize(nlpProblem1, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth1{{3.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 1");
@@ -89,12 +88,11 @@ TEST(OptimizationTest, SoftSQP) {
                             pSize,
                             "ineqs_2_soft_sqp_test"sv,
                             EnabledDerivatives::JACOBIAN};
-    auto nlpProblem2 = MakeNLPProblem(MakeFunction(objBlueprint, false),
-                                      hana::nothing,
-                                      hana::just(MakeFunction(ineqsBlueprint2, true)));
+    auto nlpProblem2 = MakeNLPProblem(
+        MakeFunction(objBlueprint, false), hana::nothing, MakeFunction(ineqsBlueprint2, true));
     SoftSQPOptimizer optimizer2{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt2 = optimizer2.Optimize(*nlpProblem2, VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt2 = optimizer2.Optimize(nlpProblem2, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth2{{2.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 2");
@@ -105,11 +103,11 @@ TEST(OptimizationTest, SoftSQP) {
     ASSERT_PRED2(predicate, xOpt2, xOptGroundTruth2);
 
     auto nlpProblem3 = MakeNLPProblem(MakeFunction(objBlueprint, false),
-                                      hana::just(MakeFunction(eqsBlueprint, true)),
-                                      hana::just(MakeFunction(ineqsBlueprint2, false)));
+                                      MakeFunction(eqsBlueprint, true),
+                                      MakeFunction(ineqsBlueprint2, false));
     SoftSQPOptimizer optimizer3{false, 1.0, 100_idx, 100.0, 2e-8};
 
-    const VectorXr xOpt3 = optimizer3.Optimize(*nlpProblem3, VectorXr::Zero(xSize + pSize));
+    const VectorXr xOpt3 = optimizer3.Optimize(nlpProblem3, VectorXr::Zero(xSize + pSize));
     const VectorXr xOptGroundTruth3{{1.0, 1.0}};
     UNGAR_LOG(debug, Utils::DASH_LINE_SEPARATOR);
     UNGAR_LOG(debug, "PROBLEM 3");
