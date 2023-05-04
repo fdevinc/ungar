@@ -665,6 +665,8 @@ constexpr auto operator,(Concepts::VariableProductExpr auto prodExpr,
 
 #define UNGAR_LEAF_VARIABLE(name, size) constexpr auto name = ::Ungar::var_c<#name, size>
 #define UNGAR_BRANCH_VARIABLE(name) constexpr auto name = ::Ungar::var_c<#name>
+#define UNGAR_VARIABLE(name, ...) \
+    constexpr auto name = ::Ungar::var_c<#name __VA_OPT__(, __VA_ARGS__)>
 
 }  // namespace Ungar
 

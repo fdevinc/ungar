@@ -36,25 +36,25 @@ int main() {
 
     /***************                 Define "leaf" variables.                 ***************/
     // Positions are 3-dimensional vectors, masses are scalars, etc.
-    UNGAR_LEAF_VARIABLE(position, 3);           // := p
-    UNGAR_LEAF_VARIABLE(linear_velocity, 3);    // := pDot
-    UNGAR_LEAF_VARIABLE(force, 3);              // := f
-    UNGAR_LEAF_VARIABLE(mass, 1);               // := m
-    UNGAR_LEAF_VARIABLE(state_cost_weight, 1);  // := wx
-    UNGAR_LEAF_VARIABLE(input_cost_weight, 1);  // := wu
+    UNGAR_VARIABLE(position, 3);           // := p
+    UNGAR_VARIABLE(linear_velocity, 3);    // := pDot
+    UNGAR_VARIABLE(force, 3);              // := f
+    UNGAR_VARIABLE(mass, 1);               // := m
+    UNGAR_VARIABLE(state_cost_weight, 1);  // := wx
+    UNGAR_VARIABLE(input_cost_weight, 1);  // := wu
 
     /***************                Define "branch" variables.                ***************/
     // States are stacked poses and velocities, while inputs are forces applied
     // to the point mass.
-    UNGAR_BRANCH_VARIABLE(x) <<= (position, linear_velocity);  // x := [p pDot]
-    UNGAR_BRANCH_VARIABLE(u) <<= force;                        // u := f
-    UNGAR_BRANCH_VARIABLE(X) <<= (N + 1_c) * x;                // X := [x0 x1 ... xN]
-    UNGAR_BRANCH_VARIABLE(U) <<= N * u;                        // U := [u0 u1 ... uN-1]
-    UNGAR_BRANCH_VARIABLE(XRef) <<= (N + 1_c) * x;             // XRef := [xRef0 xRef1 ... xRefN]
+    UNGAR_VARIABLE(x) <<= (position, linear_velocity);  // x := [p pDot]
+    UNGAR_VARIABLE(u) <<= force;                        // u := f
+    UNGAR_VARIABLE(X) <<= (N + 1_c) * x;                // X := [x0 x1 ... xN]
+    UNGAR_VARIABLE(U) <<= N * u;                        // U := [u0 u1 ... uN-1]
+    UNGAR_VARIABLE(XRef) <<= (N + 1_c) * x;             // XRef := [xRef0 xRef1 ... xRefN]
 
-    UNGAR_BRANCH_VARIABLE(decision_variables) <<= (X, U);
-    UNGAR_BRANCH_VARIABLE(parameters) <<= (mass, XRef, state_cost_weight, input_cost_weight);
-    UNGAR_BRANCH_VARIABLE(variables) <<= (decision_variables, parameters);
+    UNGAR_VARIABLE(decision_variables) <<= (X, U);
+    UNGAR_VARIABLE(parameters) <<= (mass, XRef, state_cost_weight, input_cost_weight);
+    UNGAR_VARIABLE(variables) <<= (decision_variables, parameters);
 
     /***************   Generate derivatives for functions of variable maps.   ***************/
     const Autodiff::Function::Blueprint functionBlueprint{

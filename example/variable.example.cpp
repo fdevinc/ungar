@@ -36,25 +36,25 @@ int main() {
 
     /***************                 Define "leaf" variables.                 ***************/
     // Positions are 3-dimensional vectors, orientations are unit quaternions, etc.
-    UNGAR_LEAF_VARIABLE(position, 3);          // := p
-    UNGAR_LEAF_VARIABLE(orientation, Q);       // := q
-    UNGAR_LEAF_VARIABLE(linear_velocity, 3);   // := pDot
-    UNGAR_LEAF_VARIABLE(angular_velocity, 3);  // := omega
+    UNGAR_VARIABLE(position, 3);          // := p
+    UNGAR_VARIABLE(orientation, Q);       // := q
+    UNGAR_VARIABLE(linear_velocity, 3);   // := pDot
+    UNGAR_VARIABLE(angular_velocity, 3);  // := omega
 
-    UNGAR_LEAF_VARIABLE(relative_position, 3);  // := r
-    UNGAR_LEAF_VARIABLE(force, 3);              // := f
+    UNGAR_VARIABLE(relative_position, 3);  // := r
+    UNGAR_VARIABLE(force, 3);              // := f
 
     /***************                Define "branch" variables.                ***************/
     // States are stacked poses and velocities, while inputs are ground reaction
     // forces and relative positions for each foot.
-    UNGAR_BRANCH_VARIABLE(x) <<=
-        (position, orientation, linear_velocity, angular_velocity);   // x := [p q pDot omega]
-    UNGAR_BRANCH_VARIABLE(leg_input) <<= (force, relative_position);  // lu := [f r]
-    UNGAR_BRANCH_VARIABLE(u) <<= NUM_LEGS * leg_input;                // u := [lu0 lu1 lu2 lu3]
-    UNGAR_BRANCH_VARIABLE(X) <<= (N + 1_c) * x;                       // X := [x0 x1 ... xN]
-    UNGAR_BRANCH_VARIABLE(U) <<= N * u;                               // U := [u0 u1 ... uN-1]
+    UNGAR_VARIABLE(x) <<=
+        (position, orientation, linear_velocity, angular_velocity);  // x := [p q pDot omega]
+    UNGAR_VARIABLE(leg_input) <<= (force, relative_position);        // lu := [f r]
+    UNGAR_VARIABLE(u) <<= NUM_LEGS * leg_input;                      // u := [lu0 lu1 lu2 lu3]
+    UNGAR_VARIABLE(X) <<= (N + 1_c) * x;                             // X := [x0 x1 ... xN]
+    UNGAR_VARIABLE(U) <<= N * u;                                     // U := [u0 u1 ... uN-1]
 
-    UNGAR_BRANCH_VARIABLE(variables) <<= (X, U);
+    UNGAR_VARIABLE(variables) <<= (X, U);
 
     /***************   Retrieve information about variables at compile time.  ***************/
     static_assert(position.Size() == 3);
