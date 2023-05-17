@@ -10,27 +10,27 @@ using namespace Ungar;
 int main() {
     /***************                     QUADROTOR MODEL                      ***************/
     /***************     Define numeric invariants as integral constants.     ***************/
-    constexpr auto N          = 30_c;  // Discrete time horizon.
+    constexpr auto N = 30_c;  // Discrete time horizon.
     constexpr auto NUM_ROTORS = 4_c;
 
     /***************                 Define "leaf" variables.                 ***************/
     // Positions are 3-dimensional vectors, orientations are unit quaternions,
     // rotor speeds are scalars, etc.
-    constexpr auto position         = var_c<"position", 3>;          // := p
-    constexpr auto orientation      = var_c<"orientation", Q>;       // := q
-    constexpr auto linear_velocity  = var_c<"linear_velocity", 3>;   // := pDot
-    constexpr auto angular_velocity = var_c<"angular_velocity", 3>;  // := omega
-    constexpr auto rotor_speed      = var_c<"rotor_speed", 1>;       // := r
+    UNGAR_VARIABLE(position, 3);          // := p
+    UNGAR_VARIABLE(orientation, Q);       // := q
+    UNGAR_VARIABLE(linear_velocity, 3);   // := pDot
+    UNGAR_VARIABLE(angular_velocity, 3);  // := omega
+    UNGAR_VARIABLE(rotor_speed, 1);       // := r
 
     /***************                Define "branch" variables.                ***************/
     // States are stacked poses and velocities, while inputs are stacked rotor
     // speeds: one for each rotor.
-    constexpr auto x = var_c<"x"> <<=
-        (position, orientation, linear_velocity, angular_velocity);  // x := [p q pDot omega]
-    constexpr auto u = var_c<"u"> <<= NUM_ROTORS * rotor_speed;      // u := [r0 r1 r2 r3]
-    constexpr auto X = var_c<"X"> <<= (N + 1_c) * x;                 // X := [x0 x1 ... xN]
-    constexpr auto U = var_c<"U"> <<= N * u;                         // U := [u0 u1 ... uN-1]
-    constexpr auto variables = var_c<"variables"> <<= (X, U);
+    UNGAR_VARIABLE(x) <<=
+        (position, orientation, linear_velocity, angular_velocity); // x := [p q pDot omega]
+    UNGAR_VARIABLE(u) <<= NUM_ROTORS * rotor_speed;                 // u := [r0 r1 r2 r3]
+    UNGAR_VARIABLE(X) <<= (N + 1_c) * x;                            // X := [x0 x1 ... xN]
+    UNGAR_VARIABLE(U) <<= N * u;                                    // U := [u0 u1 ... uN-1]
+    UNGAR_VARIABLE(variables) <<= (X, U);
 
     /***************            Instantiate and use variable maps.            ***************/
     // Access information about variables at compile time.
@@ -41,10 +41,10 @@ int main() {
     static_assert(variables(u, 0).Index() == X.Size());  // [ x0  x1  x2  ...  xN {u0} ... ]
 
     // Create maps over contiguous arrays of data.
-    auto vars = MakeVariableMap<real_t>(variables);  // [ X   u0    u1   ...  uN-1 ]
-    vars.Get(u, 0).setZero();                        // [ X  0000   u1   ...  uN-1 ]
-    vars.Get(u, 1).setOnes();                        // [ X  0000  1111  ...  uN-1 ]
-    vars.Get(u, N - 1).setLinSpaced(2.0, 8.0);       // [ X  0000  1111  ...  2468 ]
+    auto vars = MakeVariableMap<real_t>(variables);          // [ X   u0    u1   ...  uN-1 ]
+    vars.Get(u, 0).setZero();                                // [ X  0000   u1   ...  uN-1 ]
+    vars.Get(u, 1).setOnes();                                // [ X  0000  1111  ...  uN-1 ]
+    vars.Get(u, N - 1).setLinSpaced(2.0, 8.0);               // [ X  0000  1111  ...  2468 ]
 
     static_assert(std::same_as<decltype(vars.Get(rotor_speed, 0, 0)), real_t&>);
     static_assert(std::same_as<decltype(vars.Get(position, 0)), Eigen::Map<Vector3r>&>);
