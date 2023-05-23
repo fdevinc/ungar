@@ -52,7 +52,10 @@ class SoftSQPOptimizer {
         _osqpSettings.polish  = polish;
     }
 
-    RefToConstVectorXr Optimize(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
+    RefToConstVectorXr Optimize(const Concepts::NLPProblem auto& nlpProblem,
+                                const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         UNGAR_ASSERT(xp.size() == nlpProblem.objective.IndependentVariableSize() +
                                       nlpProblem.objective.ParameterSize());
 
@@ -104,7 +107,9 @@ class SoftSQPOptimizer {
     }
 
   private:
-    void AssembleOSQPInstance(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
+    void AssembleOSQPInstance(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         // Regularized objective matrix.
         _osqpInstance.objective_matrix =
             SparseMatrix<real_t>{nlpProblem.objective.Hessian(0_idx, xp)} +
@@ -121,7 +126,9 @@ class SoftSQPOptimizer {
         _osqpInstance.upper_bounds = -FunctionInterface::Invoke(nlpProblem.equalityConstraints, xp);
     }
 
-    void InitializeImpl(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
+    void InitializeImpl(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         _softInequalityCnstrs =
             std::make_unique<Autodiff::Function>(MakeSoftInequalityConstraintFunction(nlpProblem));
         AssembleOSQPInstance(nlpProblem, xp);
@@ -143,7 +150,9 @@ class SoftSQPOptimizer {
         }
     }
 
-    void SolveLocalQPProblem(const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
+    void SolveLocalQPProblem(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         if (!_osqpSolver.IsInitialized()) {
             InitializeImpl(nlpProblem, xp);
         } else {
@@ -213,23 +222,29 @@ class SoftSQPOptimizer {
                                       false);
     }
 
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
     real_t EvaluateSoftInequalityConstraints(const Concepts::NLPProblem auto& nlpProblem,
-                                             const VectorXr& xp) {
+                                             const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
 
         return (*_softInequalityCnstrs)(Zineq)[0_idx];
     }
 
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
     RowVectorXr SoftInequalityConstraintsJacobian(const Concepts::NLPProblem auto& nlpProblem,
-                                                  const VectorXr& xp) {
+                                                  const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
         const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 
         return _softInequalityCnstrs->Jacobian(Zineq) * ineqJacobian;
     }
 
+    template <typename _XP>  // clang-format off
+    requires std::same_as<typename _XP::Scalar, real_t> 
     Eigen::SparseMatrix<real_t> SoftInequalityConstraintsHessianApproximation(
-        const Concepts::NLPProblem auto& nlpProblem, const VectorXr& xp) {
+        const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
         const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 
