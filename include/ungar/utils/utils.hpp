@@ -727,16 +727,22 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
 }
 
 template <typename _Vector>
+inline typename _Vector::Scalar ApproximateNorm(const Eigen::MatrixBase<_Vector>& v) {
+    using ScalarType = typename _Vector::Scalar;
+
+    return Eigen::numext::sqrt(v.squaredNorm() + Eigen::NumTraits<ScalarType>::epsilon());
+}
+
+template <typename _Vector>
 inline Quaternion<typename _Vector::Scalar> ApproximateExponentialMap(
     const Eigen::MatrixBase<_Vector>& v) {
     static_assert(_Vector::RowsAtCompileTime == 3);
     using ScalarType = typename _Vector::Scalar;
     Quaternion<ScalarType> q;
 
-    ScalarType vApproximateNorm =
-        Eigen::numext::sqrt(v.squaredNorm() + Eigen::NumTraits<ScalarType>::epsilon());
-    q.vec() = v * sin(0.5 * vApproximateNorm) / vApproximateNorm;
-    q.w()   = cos(0.5 * vApproximateNorm);
+    const ScalarType vApproximateNorm = ApproximateNorm(v);
+    q.vec()                           = v * sin(0.5 * vApproximateNorm) / vApproximateNorm;
+    q.w()                             = cos(0.5 * vApproximateNorm);
     return q;
 }
 
