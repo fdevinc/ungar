@@ -56,11 +56,13 @@ if(UNGAR_ENABLE_AUTODIFF)
 endif()
 
 if(UNGAR_ENABLE_OPTIMIZATION)
+  # Newer versions of osqp-cpp may break the following patch command.
   message(STATUS "Fetching osqpcpp...")
   FetchContent_Declare(
     osqpcpp
     GIT_REPOSITORY git@github.com:google/osqp-cpp.git
     GIT_TAG master
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/osqpcpp.patch
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE)
   set(OSQP-CPP_BUILD_TESTS OFF)
