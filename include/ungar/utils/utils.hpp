@@ -858,9 +858,10 @@ inline auto ElementaryZQuaternion(const Concepts::Scalar auto angle) {
 ///        'ypr.y()' and 'ypr.x()', respectively.
 template <typename _Vector>  // clang-format off
 requires (_Vector::RowsAtCompileTime == 3)
-inline Matrix3<typename _Vector::Scalar> RotationMatrixFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
-    return {ElementaryZRotationMatrix(ypr.z()) * ElementaryYRotationMatrix(ypr.y()) *
-            ElementaryXRotationMatrix(ypr.x())};
+inline auto RotationMatrixFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
+    return Matrix3<typename _Vector::Scalar>{ElementaryZRotationMatrix(ypr.z()) *
+                                             ElementaryYRotationMatrix(ypr.y()) *
+                                             ElementaryXRotationMatrix(ypr.x())};
 }
 
 /// @brief A yaw-pitch-roll angles vector 'ypr' is defined so that
@@ -868,15 +869,16 @@ inline Matrix3<typename _Vector::Scalar> RotationMatrixFromYawPitchRoll(const Ei
 ///        'ypr.y()' and 'ypr.x()', respectively.
 template <typename _Vector>  // clang-format off
 requires (_Vector::RowsAtCompileTime == 3)
-inline Quaternion<typename _Vector::Scalar> QuaternionFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
-    return {ElementaryZQuaternion(ypr.z()) * ElementaryYQuaternion(ypr.y()) *
-            ElementaryXQuaternion(ypr.x())};
+inline auto QuaternionFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
+    return Quaternion<typename _Vector::Scalar>{ElementaryZQuaternion(ypr.z()) *
+                                                ElementaryYQuaternion(ypr.y()) *
+                                                ElementaryXQuaternion(ypr.x())};
 }
 
 template <typename _Quaternion>
-inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
-    const Eigen::QuaternionBase<_Quaternion>& q) {
-    return q.toRotationMatrix().eulerAngles(2_idx, 1_idx, 0_idx).reverse();
+inline auto QuaternionToYawPitchRoll(const Eigen::QuaternionBase<_Quaternion>& q) {
+    return Vector3<typename _Quaternion::Scalar>{
+        q.toRotationMatrix().eulerAngles(2_idx, 1_idx, 0_idx).reverse()};
 }
 
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
