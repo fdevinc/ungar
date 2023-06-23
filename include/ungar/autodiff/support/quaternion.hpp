@@ -27,26 +27,25 @@
 #ifndef _UNGAR__AUTODIFF__SUPPORT__QUATERNION_HPP_
 #define _UNGAR__AUTODIFF__SUPPORT__QUATERNION_HPP_
 
-#include "ungar/data_types.hpp"
+#include "ungar/autodiff/data_types.hpp"
 
 namespace Eigen {
 
 template <>
-EIGEN_DEVICE_FUNC inline Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
-QuaternionBase<Ungar::Quaternionad>::inverse() const {
+inline Quaternion<Ungar::ad_scalar_t> QuaternionBase<Ungar::Quaternionad>::inverse() const {
     Scalar n2 = this->squaredNorm();
     return Quaternion<Scalar>{conjugate().coeffs() /
                               CppAD::CondExpGt(n2, RealScalar{0}, n2, RealScalar{1.0})};
 }
 template <>
-EIGEN_DEVICE_FUNC inline Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
-QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::inverse() const {
+inline Quaternion<Ungar::ad_scalar_t> QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::inverse()
+    const {
     Scalar n2 = this->squaredNorm();
     return Quaternion<Scalar>{conjugate().coeffs() /
                               CppAD::CondExpGt(n2, RealScalar{0}, n2, RealScalar{1.0})};
 }
 template <>
-EIGEN_DEVICE_FUNC inline Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
+inline Quaternion<Ungar::ad_scalar_t>
 QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::inverse() const {
     Scalar n2 = this->squaredNorm();
     return Quaternion<Scalar>{conjugate().coeffs() /
@@ -54,65 +53,63 @@ QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::inverse() const {
 }
 
 template <>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void MatrixBase<Ungar::Vector4ad>::normalize() {
+inline void MatrixBase<Ungar::Vector4ad>::normalize() {
     RealScalar z = squaredNorm();
     derived() /= CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 template <>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void MatrixBase<Eigen::Map<Ungar::Vector4ad>>::normalize() {
+inline void MatrixBase<Eigen::Map<Ungar::Vector4ad>>::normalize() {
     RealScalar z = squaredNorm();
     derived() /= CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 
 template <>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const typename MatrixBase<Ungar::Vector4ad>::PlainObject
+inline const typename MatrixBase<Ungar::Vector4ad>::PlainObject
 MatrixBase<Ungar::Vector4ad>::normalized() const {
-    typedef typename internal::nested_eval<Ungar::Vector4ad, 2>::type _Nested;
+    using _Nested = const Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 4, 1, 0>&;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 template <>
-EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const typename MatrixBase<Eigen::Map<Ungar::Vector4ad>>::PlainObject
-    MatrixBase<Eigen::Map<Ungar::Vector4ad>>::normalized() const {
-    typedef typename internal::nested_eval<Eigen::Map<Ungar::Vector4ad>, 2>::type _Nested;
+inline const typename MatrixBase<Eigen::Map<Ungar::Vector4ad>>::PlainObject
+MatrixBase<Eigen::Map<Ungar::Vector4ad>>::normalized() const {
+    using _Nested = const Eigen::Map<Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 4, 1, 0>, 0>;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 template <>
-EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const typename MatrixBase<Eigen::Map<const Ungar::Vector4ad>>::PlainObject
-    MatrixBase<Eigen::Map<const Ungar::Vector4ad>>::normalized() const {
-    typedef typename internal::nested_eval<Eigen::Map<const Ungar::Vector4ad>, 2>::type _Nested;
+inline const typename MatrixBase<Eigen::Map<const Ungar::Vector4ad>>::PlainObject
+MatrixBase<Eigen::Map<const Ungar::Vector4ad>>::normalized() const {
+    using _Nested =
+        const Eigen::Map<const Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 4, 1, 0>, 0>;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 
 template <>
-EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const typename MatrixBase<Ungar::Vector3ad>::PlainObject
+inline const typename MatrixBase<Ungar::Vector3ad>::PlainObject
 MatrixBase<Ungar::Vector3ad>::normalized() const {
-    typedef typename internal::nested_eval<Ungar::Vector3ad, 2>::type _Nested;
+    using _Nested = const Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 3, 1, 0>&;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 template <>
-EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const typename MatrixBase<Eigen::Map<Ungar::Vector3ad>>::PlainObject
-    MatrixBase<Eigen::Map<Ungar::Vector3ad>>::normalized() const {
-    typedef typename internal::nested_eval<Eigen::Map<Ungar::Vector3ad>, 2>::type _Nested;
+inline const typename MatrixBase<Eigen::Map<Ungar::Vector3ad>>::PlainObject
+MatrixBase<Eigen::Map<Ungar::Vector3ad>>::normalized() const {
+    using _Nested = const Eigen::Map<Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 3, 1, 0>, 0>;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
 }
 template <>
-EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE const typename MatrixBase<Eigen::Map<const Ungar::Vector3ad>>::PlainObject
-    MatrixBase<Eigen::Map<const Ungar::Vector3ad>>::normalized() const {
-    typedef typename internal::nested_eval<Eigen::Map<const Ungar::Vector3ad>, 2>::type _Nested;
+inline const typename MatrixBase<Eigen::Map<const Ungar::Vector3ad>>::PlainObject
+MatrixBase<Eigen::Map<const Ungar::Vector3ad>>::normalized() const {
+    using _Nested =
+        const Eigen::Map<const Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, 3, 1, 0>, 0>;
     _Nested n(derived());
     RealScalar z = n.squaredNorm();
     return n / CppAD::CondExpGt(z, RealScalar{0}, numext::sqrt(z), RealScalar{1.0});
@@ -124,8 +121,7 @@ template <>
 struct quaternionbase_assign_impl<Ungar::Matrix3ad, 3, 3> {
     typedef typename Ungar::Matrix3ad::Scalar Scalar;
     template <class Derived>
-    EIGEN_DEVICE_FUNC static inline void run(QuaternionBase<Derived>& q,
-                                             const Ungar::Matrix3ad& a_mat) {
+    static inline void run(QuaternionBase<Derived>& q, const Ungar::Matrix3ad& a_mat) {
         static_assert(Ungar::dependent_false<Derived>,
                       "The construction of unit quaternions from rotation matrices with scalar "
                       "type 'ad_scalar_t' is not implemented.");
@@ -136,11 +132,10 @@ struct quaternionbase_assign_impl<Ungar::Matrix3ad, 3, 3> {
 
 template <>
 template <class OtherDerived>
-EIGEN_DEVICE_FUNC Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
-QuaternionBase<Ungar::Quaternionad>::slerp(const Scalar& t,
-                                           const QuaternionBase<OtherDerived>& other) const {
-    EIGEN_USING_STD(acos)
-    EIGEN_USING_STD(sin)
+Quaternion<Ungar::ad_scalar_t> QuaternionBase<Ungar::Quaternionad>::slerp(
+    const Scalar& t, const QuaternionBase<OtherDerived>& other) const {
+    using std::acos;
+    using std::sin;
     const Scalar one  = Scalar{1.0} - NumTraits<Scalar>::epsilon();
     const Scalar d    = this->dot(other);
     const Scalar absD = numext::abs(d);
@@ -157,11 +152,10 @@ QuaternionBase<Ungar::Quaternionad>::slerp(const Scalar& t,
 }
 template <>
 template <class OtherDerived>
-EIGEN_DEVICE_FUNC Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
-QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::slerp(
+Quaternion<Ungar::ad_scalar_t> QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::slerp(
     const Scalar& t, const QuaternionBase<OtherDerived>& other) const {
-    EIGEN_USING_STD(acos)
-    EIGEN_USING_STD(sin)
+    using std::acos;
+    using std::sin;
     const Scalar one  = Scalar{1.0} - NumTraits<Scalar>::epsilon();
     const Scalar d    = this->dot(other);
     const Scalar absD = numext::abs(d);
@@ -178,11 +172,10 @@ QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::slerp(
 }
 template <>
 template <class OtherDerived>
-EIGEN_DEVICE_FUNC Quaternion<typename internal::traits<Ungar::Quaternionad>::Scalar>
-QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::slerp(
+Quaternion<Ungar::ad_scalar_t> QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::slerp(
     const Scalar& t, const QuaternionBase<OtherDerived>& other) const {
-    EIGEN_USING_STD(acos)
-    EIGEN_USING_STD(sin)
+    using std::acos;
+    using std::sin;
     const Scalar one  = Scalar{1.0} - NumTraits<Scalar>::epsilon();
     const Scalar d    = this->dot(other);
     const Scalar absD = numext::abs(d);
@@ -200,9 +193,8 @@ QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::slerp(
 
 template <>
 template <typename Derived1, typename Derived2>
-EIGEN_DEVICE_FUNC inline Ungar::Quaternionad&
-QuaternionBase<Ungar::Quaternionad>::setFromTwoVectors(const MatrixBase<Derived1>& a,
-                                                       const MatrixBase<Derived2>& b) {
+inline Ungar::Quaternionad& QuaternionBase<Ungar::Quaternionad>::setFromTwoVectors(
+    const MatrixBase<Derived1>& a, const MatrixBase<Derived2>& b) {
     static_assert(Ungar::dependent_false<Derived1, Derived2>,
                   "The construction of unit quaternions with scalar type 'ad_scalar_t' from two "
                   "vectors is not implemented.");
@@ -210,7 +202,7 @@ QuaternionBase<Ungar::Quaternionad>::setFromTwoVectors(const MatrixBase<Derived1
 }
 template <>
 template <typename Derived1, typename Derived2>
-EIGEN_DEVICE_FUNC inline Eigen::Map<Ungar::Quaternionad>&
+inline Eigen::Map<Ungar::Quaternionad>&
 QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::setFromTwoVectors(const MatrixBase<Derived1>& a,
                                                                    const MatrixBase<Derived2>& b) {
     static_assert(Ungar::dependent_false<Derived1, Derived2>,
@@ -220,7 +212,7 @@ QuaternionBase<Eigen::Map<Ungar::Quaternionad>>::setFromTwoVectors(const MatrixB
 }
 template <>
 template <typename Derived1, typename Derived2>
-EIGEN_DEVICE_FUNC inline Eigen::Map<const Ungar::Quaternionad>&
+inline Eigen::Map<const Ungar::Quaternionad>&
 QuaternionBase<Eigen::Map<const Ungar::Quaternionad>>::setFromTwoVectors(
     const MatrixBase<Derived1>& a, const MatrixBase<Derived2>& b) {
     static_assert(Ungar::dependent_false<Derived1, Derived2>,

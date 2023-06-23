@@ -199,7 +199,7 @@ concept DenseMatrixExpression = std::derived_from<std::remove_cvref_t<_Matrix>,
 
 template <typename _Vector>
 concept DenseVectorExpression = DenseMatrixExpression<_Vector> &&
-    (std::remove_cvref_t<_Vector>::ColsAtCompileTime == 1);
+                                (std::remove_cvref_t<_Vector>::ColsAtCompileTime == 1);
 
 template <typename _Matrix>
 concept SparseMatrixExpression =

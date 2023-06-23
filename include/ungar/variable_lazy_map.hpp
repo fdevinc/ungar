@@ -31,8 +31,6 @@
 
 namespace Ungar {
 
-static_assert(std::ranges::sized_range<VectorXr>);
-
 template <typename _Scalar, Concepts::Variable _Variable, Concepts::HanaBool _EnableMutableMembers>
 class VariableLazyMap {
   private:
