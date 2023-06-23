@@ -71,7 +71,7 @@ endif()
 # ##############################################################################
 # Core modules.
 list(APPEND UNGAR_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include")
-list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen Boost::hana)
+list(APPEND UNGAR_LINK_LIBRARIES nanorange Eigen3::Eigen Boost::hana)
 
 # Optional modules.
 if(UNGAR_ENABLE_LOGGING)

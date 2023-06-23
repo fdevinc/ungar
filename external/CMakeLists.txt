@@ -13,6 +13,8 @@ if(UNGAR_BUILD_TESTS)
   include(GoogleTest)
 endif()
 
+add_subdirectory(nanorange)
+
 if(NOT TARGET Eigen3::Eigen)
   add_subdirectory(eigen3)
 endif()
