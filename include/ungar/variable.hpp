@@ -31,12 +31,12 @@
 
 namespace Ungar {
 
-template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaOptional _S>
+template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
 struct Variable;
 
 template <class _T>
 struct is_variable : std::false_type {};
-template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaOptional _S>
+template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
 struct is_variable<Variable<_N, _M, _S>> : std::true_type {};
 template <class _T>
 constexpr bool is_variable_v = is_variable<_T>::value;
@@ -71,8 +71,8 @@ concept VariableProductExpr = is_variable_product_expr_v<_Variable>;
 }
 
 template <Concepts::HanaString _Name,
-          Concepts::HanaMap _Map       = decltype(hana::make_map()),
-          Concepts::HanaOptional _Size = decltype(hana::nothing)>
+          Concepts::HanaMap _Map = decltype(hana::make_map()),
+          index_t _Size          = 0_idx>
 class Variable {
   public:
     constexpr Variable() : _index{0_idx} {
@@ -98,16 +98,16 @@ class Variable {
     }
 
     static constexpr bool IsLeaf() {
-        static_assert(hana::is_empty(hana::keys(DefaultMap())) || !hana::is_just(_Size{}));
-        return hana::is_just(_Size{});
+        static_assert(hana::is_empty(hana::keys(DefaultMap())) || !_Size);
+        return !!_Size;
     }
 
     static constexpr bool IsBranch() {
-        return hana::is_nothing(_Size{});
+        return !_Size;
     }
 
     static constexpr bool IsScalar() {
-        return (_Size{} == hana::make_optional(1_c)).value;
+        return _Size == 1_idx;
     }
 
     static constexpr bool IsVector() {
@@ -115,13 +115,13 @@ class Variable {
     }
 
     static constexpr bool IsQuaternion() {
-        return (_Size{} == hana::make_optional(Q_c)).value;
+        return _Size == Q;
     }
 
     constexpr auto operator<<=(Concepts::Variable auto var) const requires(IsBranch()) {
         auto map = hana::insert(
             _map, hana::make_pair(var.Name(), var.CloneWithIndexOffset(Index() + SizeC())));
-        return Make(Name(), map, Index(), hana::nothing);
+        return Make(Name(), map, Index(), 0_c);
     }
 
     constexpr auto operator<<=(Concepts::HanaTuple auto tuple) const requires(IsBranch()) {
@@ -136,7 +136,7 @@ class Variable {
                                                                 prodExpr.var.SizeC() * is)...};
         });
         auto map   = hana::insert(_map, hana::make_pair(prodExpr.var.Name(), array));
-        return Make(Name(), map, Index(), hana::nothing);
+        return Make(Name(), map, Index(), 0_c);
     }
 
     /**
@@ -310,7 +310,7 @@ class Variable {
     }
 
   private:
-    template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaOptional _S>
+    template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
     friend class Variable;
     template <typename _Scalar, Concepts::Variable _Variable>
     friend class VariableMap;
@@ -319,13 +319,12 @@ class Variable {
         return Variable{}._map;
     }
 
-    template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaOptional _S>
+    template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaIntegralConstant _S>
     static constexpr auto Make(_N name, _M map, const index_t index, _S size) {
-        return Variable<_N, _M, _S>{name, map, index, size};
+        return Variable<_N, _M, _S::value>{name, map, index};
     }
 
-    constexpr Variable(_Name /* name */, _Map map, const index_t index, _Size /* size */)
-        : _map{map}, _index{index} {
+    constexpr Variable(_Name /* name */, _Map map, const index_t index) : _map{map}, _index{index} {
     }
 
     constexpr auto Clone() const {
@@ -347,7 +346,7 @@ class Variable {
             if constexpr (IsQuaternion()) {
                 return 4_c;
             } else {
-                return _Size{}.value();
+                return hana::llong_c<_Size>;
             }
         } else {
             return hana::fold(hana::values(DefaultMap()), 0_c, [](auto size, auto value) {
@@ -598,17 +597,15 @@ class Variable {
 
     _Name _name;
     _Map _map;
-    _Size _size;
 
     index_t _index;
 };
 
 template <Concepts::HanaString _Name>
-Variable(_Name name) -> Variable<_Name, decltype(hana::make_map()), decltype(hana::nothing)>;
+Variable(_Name name) -> Variable<_Name, decltype(hana::make_map()), 0_idx>;
 
 template <Concepts::HanaString _Name, Concepts::HanaIntegralConstant _Size>
-Variable(_Name name, _Size size)
-    -> Variable<_Name, decltype(hana::make_map()), decltype(hana::just(size))>;
+Variable(_Name name, _Size size) -> Variable<_Name, decltype(hana::make_map()), _Size::value>;
 
 static_assert(Q != std::numeric_limits<index_t>::max() &&
                   Q_c.value != static_cast<long long>(std::numeric_limits<index_t>::max()),
@@ -623,7 +620,7 @@ inline constexpr auto var_c = []() {
     }
 }();
 
-template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaOptional _S>
+template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
 constexpr auto operator*(Concepts::HanaIntegralConstant auto cnt, Variable<_N, _M, _S> var) {
     return VariableProductExpr{cnt, var};
 }
