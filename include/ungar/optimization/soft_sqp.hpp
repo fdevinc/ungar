@@ -27,6 +27,7 @@
 #ifndef _UNGAR__OPTIMIZATION__SOFT_SQP_HPP_
 #define _UNGAR__OPTIMIZATION__SOFT_SQP_HPP_
 
+#include <type_traits>
 #include <osqp++.h>
 
 #include "ungar/optimization/backtracking_line_search.hpp"
@@ -52,10 +53,12 @@ class SoftSQPOptimizer {
         _osqpSettings.polish  = polish;
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    RefToConstVectorXr Optimize(const Concepts::NLPProblem auto& nlpProblem,
-                                const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    RefToConstVectorXr Optimize(const _NLPProblem& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {
         UNGAR_ASSERT(xp.size() == nlpProblem.objective.IndependentVariableSize() +
                                       nlpProblem.objective.ParameterSize());
 
@@ -107,9 +110,12 @@ class SoftSQPOptimizer {
     }
 
   private:
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    void AssembleOSQPInstance(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    void AssembleOSQPInstance(const _NLPProblem& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {
         // Regularized objective matrix.
         _osqpInstance.objective_matrix =
             SparseMatrix<real_t>{nlpProblem.objective.Hessian(0_idx, xp)} +
@@ -126,9 +132,12 @@ class SoftSQPOptimizer {
         _osqpInstance.upper_bounds = -FunctionInterface::Invoke(nlpProblem.equalityConstraints, xp);
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    void InitializeImpl(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    void InitializeImpl(const _NLPProblem& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {
         _softInequalityCnstrs =
             std::make_unique<Autodiff::Function>(MakeSoftInequalityConstraintFunction(nlpProblem));
         AssembleOSQPInstance(nlpProblem, xp);
@@ -150,9 +159,12 @@ class SoftSQPOptimizer {
         }
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    void SolveLocalQPProblem(const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    void SolveLocalQPProblem(const _NLPProblem& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {
         if (!_osqpSolver.IsInitialized()) {
             InitializeImpl(nlpProblem, xp);
         } else {
@@ -202,8 +214,8 @@ class SoftSQPOptimizer {
         }
     }
 
-    Autodiff::Function MakeSoftInequalityConstraintFunction(
-        const Concepts::NLPProblem auto& nlpProblem) const {
+    template <typename _NLPProblem, std::enable_if_t<is_nlp_problem_v<_NLPProblem>, bool> = true>
+    Autodiff::Function MakeSoftInequalityConstraintFunction(const _NLPProblem& nlpProblem) const {
         auto Zsoft = [&](const VectorXad& variables, VectorXad& Zsoft) -> void {
             Zsoft.resize(1_idx);
             Zsoft << SoftInequalityConstraint{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
@@ -222,29 +234,38 @@ class SoftSQPOptimizer {
                                       false);
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    real_t EvaluateSoftInequalityConstraints(const Concepts::NLPProblem auto& nlpProblem,
-                                             const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    real_t EvaluateSoftInequalityConstraints(const _NLPProblem& nlpProblem,
+                                             const Eigen::MatrixBase<_XP>& xp) {
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
 
         return (*_softInequalityCnstrs)(Zineq)[0_idx];
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
-    RowVectorXr SoftInequalityConstraintsJacobian(const Concepts::NLPProblem auto& nlpProblem,
-                                                  const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
+    RowVectorXr SoftInequalityConstraintsJacobian(const _NLPProblem& nlpProblem,
+                                                  const Eigen::MatrixBase<_XP>& xp) {
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
         const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 
         return _softInequalityCnstrs->Jacobian(Zineq) * ineqJacobian;
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t> 
+    template <typename _NLPProblem,
+              typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t> &&
+                                   is_nlp_problem_v<_NLPProblem>,
+                               bool> = true>
     Eigen::SparseMatrix<real_t> SoftInequalityConstraintsHessianApproximation(
-        const Concepts::NLPProblem auto& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {  // clang-format on
+        const _NLPProblem& nlpProblem, const Eigen::MatrixBase<_XP>& xp) {
         const VectorXr Zineq{FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp)};
         const auto ineqJacobian = FunctionInterface::Jacobian(nlpProblem.inequalityConstraints, xp);
 

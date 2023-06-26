@@ -32,15 +32,14 @@
 
 namespace Ungar {
 
-template <typename _Scalar, Concepts::Variable _Variable>
-class VariableMap : private VectorX<_Scalar>,
-                    private VariableLazyMap<_Scalar, _Variable, hana::true_> {
+template <typename _Scalar, typename _Variable>
+class VariableMap : private VectorX<_Scalar>, private VariableLazyMap<_Scalar, _Variable, true> {
   private:
     using VectorType   = VectorX<_Scalar>;
-    using LazyMapType  = VariableLazyMap<_Scalar, _Variable, hana::true_>;
+    using LazyMapType  = VariableLazyMap<_Scalar, _Variable, true>;
     using VariableType = _Variable;
 
-    template <Concepts::Variable _Var>
+    template <typename _Var>
     static constexpr auto SizeCImpl(const _Var& var) {
         if constexpr (_Var::IsQuaternion()) {
             return Q_c;
@@ -49,8 +48,8 @@ class VariableMap : private VectorX<_Scalar>,
         }
     }
 
-    static auto __attribute__((optimize(0)))
-    InitImpl(LazyMapType lazyMap, const VariableType& var, Concepts::HanaBool auto initConstMap) {
+    template <typename _HanaBool>
+    static auto InitImpl(LazyMapType lazyMap, const VariableType& var, _HanaBool initConstMap) {
         add_const_if_t<LazyMapType, initConstMap>& lm{lazyMap};
 
         auto unique = var.Unique([](const auto& v) { return SizeCImpl(v); });
@@ -94,15 +93,17 @@ class VariableMap : private VectorX<_Scalar>,
         return static_cast<VectorType&>(*this);
     }
 
-    decltype(auto) Get(auto&&... args) const {
+    template <typename... _Args>
+    decltype(auto) Get(_Args&&... args) const {
         return Get1(AsLazyMap()._variable(std::forward<decltype(args)>(args)...));
     }
 
-    decltype(auto) Get(auto&&... args) {
+    template <typename... _Args>
+    decltype(auto) Get(_Args&&... args) {
         return Get1(AsLazyMap()._variable(std::forward<decltype(args)>(args)...));
     }
 
-    template <Concepts::Variable _Var>
+    template <typename _Var>
     const auto& Get1(const _Var& var) const {
         if constexpr (decltype(hana::contains(_constImpl, SizeCImpl(var)))::value) {
             UNGAR_ASSERT(_constImpl[SizeCImpl(var)].contains(var.Index()));
@@ -116,7 +117,7 @@ class VariableMap : private VectorX<_Scalar>,
         }
     }
 
-    template <Concepts::Variable _Var>
+    template <typename _Var>
     auto& Get1(const _Var& var) {
         if constexpr (decltype(hana::contains(_impl, SizeCImpl(var)))::value) {
             UNGAR_ASSERT(_impl[SizeCImpl(var)].contains(var.Index()));
@@ -135,11 +136,11 @@ class VariableMap : private VectorX<_Scalar>,
     decltype(InitImpl(LazyMapType{}, VariableType{}, hana::true_c)) _constImpl;
 };
 
-template <typename _Scalar, Concepts::Variable _Variable>
+template <typename _Scalar, typename _Variable>
 VariableMap(const _Variable& var, hana::basic_type<_Scalar>) -> VariableMap<_Scalar, _Variable>;
 
-template <typename _Scalar>
-inline static auto MakeVariableMap(const Concepts::Variable auto& var) {
+template <typename _Scalar, typename _Variable>
+inline static auto MakeVariableMap(const _Variable& var) {
     return VariableMap{hana::type_c<_Scalar>, var};
 }
 

@@ -27,10 +27,12 @@
 #ifndef _UNGAR__UTILS__UTILS_HPP_
 #define _UNGAR__UTILS__UTILS_HPP_
 
+#include <cmath>
 #include <filesystem>
 #include <locale>
 #include <random>
 
+#include "boost/hana/fwd/type.hpp"
 #include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
 
@@ -39,17 +41,6 @@
 #endif
 
 namespace Ungar {
-namespace Concepts {
-
-template <typename _Scalar>
-concept Scalar =
-#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-    std::convertible_to<_Scalar, real_t> || std::convertible_to<_Scalar, ad_scalar_t>;
-#else
-    std::convertible_to<_Scalar, real_t>;
-#endif
-
-}  // namespace Concepts
 
 [[noreturn]] inline void Unreachable() {
     // Uses compiler specific extensions if possible.
@@ -130,24 +121,14 @@ void SparseMatrixToTriplets(const SparseMatrix<real_t>& sparseMatrix,
 }
 
 namespace Internal {
-namespace Concepts {
 
-// clang-format off
-template <typename _SparseMatrix>
-concept HasNonZeros = requires (const _SparseMatrix sparseMatrix) {
-    sparseMatrix.nonZeros();
-};
-// clang-format on
-
-}  // namespace Concepts
-}  // namespace Internal
-
-namespace Internal {
+static auto hasNonZeros =
+    hana::is_valid([](auto&& sparseMatrix) -> decltype((void)sparseMatrix.nonZeros()) {});
 
 template <typename... _SparseMatrices>
 class VerticallyStackSparseMatricesImpl {
   public:
-    using ScalarType = std::common_type_t<typename std::remove_cvref_t<_SparseMatrices>::Scalar...>;
+    using ScalarType = std::common_type_t<typename remove_cvref_t<_SparseMatrices>::Scalar...>;
 
     VerticallyStackSparseMatricesImpl(_SparseMatrices&&... sparseMatrices)
         : _sparseMatrices{std::forward<_SparseMatrices>(sparseMatrices)...} {
@@ -169,7 +150,7 @@ class VerticallyStackSparseMatricesImpl {
 
   private:
     template <typename _StackedSparseMatrix>
-    void In(const Eigen::SparseMatrixBase<std::remove_cvref_t<_SparseMatrices>>&... sparseMatrices,
+    void In(const Eigen::SparseMatrixBase<remove_cvref_t<_SparseMatrices>>&... sparseMatrices,
             Eigen::SparseMatrixBase<_StackedSparseMatrix> const& stackedSparseMatrix) {
         UNGAR_ASSERT([](const auto& m0, const auto&... ms) {
             return ((m0.cols() == ms.cols()) && ...);
@@ -180,7 +161,7 @@ class VerticallyStackSparseMatricesImpl {
         }(sparseMatrices...);
 
         std::vector<MutableTriplet<ScalarType>> triplets;
-        if constexpr ((Internal::Concepts::HasNonZeros<_SparseMatrices> && ...)) {
+        if constexpr ((decltype(hasNonZeros(sparseMatrices)){} && ...)) {
             triplets.reserve((sparseMatrices.derived().nonZeros() + ...));
         }
 
@@ -193,7 +174,7 @@ class VerticallyStackSparseMatricesImpl {
     }
 
     SparseMatrix<ScalarType> ToSparse(
-        const Eigen::SparseMatrixBase<std::remove_cvref_t<_SparseMatrices>>&... sparseMatrices) {
+        const Eigen::SparseMatrixBase<remove_cvref_t<_SparseMatrices>>&... sparseMatrices) {
         UNGAR_ASSERT([](const auto& m0, const auto&... ms) {
             return ((m0.cols() == ms.cols()) && ...);
         }(sparseMatrices...));
@@ -203,7 +184,7 @@ class VerticallyStackSparseMatricesImpl {
         }(sparseMatrices...);
 
         std::vector<MutableTriplet<ScalarType>> triplets;
-        if constexpr ((Internal::Concepts::HasNonZeros<_SparseMatrices> && ...)) {
+        if constexpr ((decltype(hasNonZeros(sparseMatrices)){} && ...)) {
             triplets.reserve((sparseMatrices.derived().nonZeros() + ...));
         }
 
@@ -223,7 +204,6 @@ class VerticallyStackSparseMatricesImpl {
 }  // namespace Internal
 
 template <typename... _SparseMatrices>  // clang-format off
-requires (sizeof...(_SparseMatrices) > 0UL)
 auto VerticallyStackSparseMatrices(_SparseMatrices&&... sparseMatrices) {  // clang-format on
     return Internal::VerticallyStackSparseMatricesImpl<_SparseMatrices...>{
         std::forward<_SparseMatrices>(sparseMatrices)...};
@@ -242,261 +222,10 @@ inline constexpr decltype(auto) EigenConstCastIf(const Eigen::MatrixBase<_Derive
     }
 }
 
-namespace Internal {
-
-template <int _SIZE>
-inline constexpr auto DecompositionElementSize() {
-    if constexpr (_SIZE == Q) {
-        return 4;
-    } else {
-        return _SIZE;
-    }
-}
-
-template <typename _Scalar, int _SIZE, bool _IS_CONST>
-inline constexpr auto DecompositionElementTypeHelper() {
-    if constexpr (_SIZE == 1) {
-        return hana::type_c<add_const_if_t<_Scalar, _IS_CONST>&>;
-    } else if constexpr (_SIZE == Q) {
-        return hana::type_c<Eigen::Map<add_const_if_t<Quaternion<_Scalar>, _IS_CONST>>>;
-    } else {
-        return hana::type_c<Eigen::Map<add_const_if_t<Vector<_Scalar, _SIZE>, _IS_CONST>>>;
-    }
-}
-
-template <typename _Scalar, int _SIZE, bool _IS_CONST>
-using DecompositionElementType =
-    typename decltype(+DecompositionElementTypeHelper<_Scalar, _SIZE, _IS_CONST>())::type;
-
-template <int _INDEX, int _SIZE, bool _IS_CONST, typename _DecomposableVector>
-inline constexpr decltype(auto) DecomposeImpl(
-    Eigen::MatrixBase<_DecomposableVector> const& decomposableVector) {
-    using ScalarType  = typename _DecomposableVector::Scalar;
-    using ElementType = DecompositionElementType<ScalarType, _SIZE, _IS_CONST>;
-
-    decltype(auto) vec = EigenConstCastIf(decomposableVector, hana::not_(hana::bool_c<_IS_CONST>));
-    if constexpr (_SIZE == 1) {
-        static_assert(std::same_as<ElementType, decltype(vec.derived().coeffRef(_INDEX))>);
-        return vec.derived().coeffRef(_INDEX);
-    } else {
-        static_assert(
-            std::same_as<add_const_if_t<ScalarType, _IS_CONST>*, decltype(vec.derived().data())>);
-        return ElementType{vec.derived().data() + _INDEX};
-    }
-}
-
-template <int... _SIZES, bool _IS_CONST, typename _DecomposableVector>  // clang-format off
-requires (_DecomposableVector::RowsAtCompileTime == Eigen::Dynamic || 
-          _DecomposableVector::RowsAtCompileTime == (DecompositionElementSize<_SIZES>() + ...))
-inline auto Decompose(
-        Eigen::MatrixBase<_DecomposableVector> const& decomposableVector,
-        hana::bool_<_IS_CONST>) {  // clang-format on
-    if constexpr (_DecomposableVector::RowsAtCompileTime == Eigen::Dynamic) {
-        UNGAR_ASSERT(decomposableVector.size() == (DecompositionElementSize<_SIZES>() + ...));
-    }
-
-    using ScalarType = typename _DecomposableVector::Scalar;
-    using ReturnType = std::tuple<DecompositionElementType<ScalarType, _SIZES, _IS_CONST>...>;
-
-    constexpr auto SIZE_TUPLE = hana::make_tuple(hana::int_c<_SIZES>...);
-    constexpr auto INDEX_TUPLE =
-        hana::drop_back(hana::scan_left(SIZE_TUPLE, hana::int_c<0>, [](auto index, auto size) {
-            return index + hana::int_c<DecompositionElementSize<size>()>;
-        }));
-
-    return hana::unpack(std::make_index_sequence<sizeof...(_SIZES)>(), [&](auto... is) {
-        return ReturnType{
-            DecomposeImpl<INDEX_TUPLE[is], SIZE_TUPLE[is], _IS_CONST>(decomposableVector)...};
-    });
-}
-
-namespace Concepts {
-
-template <typename _ComposableVector>
-concept ComposableVector = Ungar::Concepts::DenseMatrixExpression<_ComposableVector> ||
-                           Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
-
-}  // namespace Concepts
-
-template <Concepts::ComposableVector _ComposableVector>
-struct ComposableVectorTraits {
-    static constexpr index_t SIZE = std::remove_cvref_t<_ComposableVector>::RowsAtCompileTime;
-    static constexpr bool SCALAR  = false;
-    using ScalarType              = typename std::remove_cvref_t<_ComposableVector>::Scalar;
-};
-
-template <Concepts::ComposableVector _ComposableVector>  // clang-format off
-requires (!Ungar::Concepts::DenseMatrixExpression<_ComposableVector>)
-struct ComposableVectorTraits<_ComposableVector> {  // clang-format on
-    static constexpr index_t SIZE = 1_idx;
-    static constexpr bool SCALAR  = true;
-    using ScalarType              = std::remove_cvref_t<_ComposableVector>;
-};
-
-index_t ComposableVectorSize(Concepts::ComposableVector auto&& composableVector) {
-    if constexpr (Ungar::Concepts::DenseMatrixExpression<decltype(composableVector)>) {
-        return composableVector.size();
-    } else {
-        return 1_idx;
-    }
-}
-
-template <Concepts::ComposableVector... _ComposableVectors>
-class ComposeImpl {
-  public:
-    static constexpr bool ALL_FIXED_SIZES =
-        ((ComposableVectorTraits<_ComposableVectors>::SIZE != Eigen::Dynamic) && ...);
-    static constexpr auto COMPOSED_VECTOR_SIZE =
-        ALL_FIXED_SIZES ? (ComposableVectorTraits<_ComposableVectors>::SIZE + ...) : -1_idx;
-
-    using ScalarType =
-        std::common_type_t<typename ComposableVectorTraits<_ComposableVectors>::ScalarType...>;
-
-    template <typename... _Args>
-    ComposeImpl(_Args&&... args) : _composableVectors{std::forward<_Args>(args)...} {
-    }
-
-    template <typename _ComposedVector>  // clang-format off
-    requires (!ALL_FIXED_SIZES)
-    void In(Eigen::MatrixBase<_ComposedVector> const& composedVector) {  // clang-format on
-        const index_t composedVectorSize = hana::unpack(
-            _composableVectors, [](auto&&... vs) { return (ComposableVectorSize(vs) + ...); });
-
-        if constexpr (ComposableVectorTraits<_ComposedVector>::SIZE != Eigen::Dynamic) {
-            UNGAR_ASSERT(composedVector.size() == composedVectorSize);
-        } else {
-            composedVector.const_cast_derived().resize(composedVectorSize);
-        }
-        const auto sizeTuple  = hana::unpack(_composableVectors, [](auto&&... vs) {
-            return hana::make_tuple(ComposableVectorSize(vs)...);
-        });
-        const auto indexTuple = hana::drop_back(
-            hana::scan_left(sizeTuple, 0_idx, [](auto index, auto size) { return index + size; }));
-
-        std::apply(  // clang-format off
-            [&] (auto&&... args) {  // clang-format on
-                return hana::unpack(
-                    std::make_index_sequence<sizeof...(_ComposableVectors)>(),
-                    [&](const auto... is) constexpr {
-                        auto impl = hana::overload(
-                            [&](auto i, auto&& scalar) requires Ungar::Concepts::Scalar<
-                                std::remove_cvref_t<decltype(scalar)>> {
-                                composedVector.const_cast_derived()[indexTuple[i]] = scalar;
-                            },
-                            [&](auto i, auto&& subvector) {
-                                composedVector.const_cast_derived().segment(
-                                    indexTuple[i], sizeTuple[i]) = subvector;
-                            });
-
-                        (impl(is, args), ...);
-                    });
-
-            },
-            _composableVectors);
-    }
-
-    template <typename _ComposedVector>  // clang-format off
-    requires ALL_FIXED_SIZES &&
-             (ComposableVectorTraits<_ComposedVector>::SIZE == Eigen::Dynamic || 
-              ComposableVectorTraits<_ComposedVector>::SIZE == COMPOSED_VECTOR_SIZE)
-    void In(Eigen::MatrixBase<_ComposedVector> const& composedVector) {  // clang-format on
-        if constexpr (ComposableVectorTraits<_ComposedVector>::SIZE == Eigen::Dynamic) {
-            UNGAR_ASSERT(composedVector.size() == COMPOSED_VECTOR_SIZE);
-        }
-        static constexpr auto _SIZE_TUPLE =
-            hana::make_tuple(hana::int_c<ComposableVectorTraits<_ComposableVectors>::SIZE>...);
-        static constexpr auto _INDEX_TUPLE = hana::drop_back(hana::scan_left(
-            _SIZE_TUPLE, hana::int_c<0>, [](auto index, auto size) { return index + size; }));
-
-        std::apply(  // clang-format off
-            [&]<typename... _Ts>(_Ts&&... args) {  // clang-format on
-                return hana::unpack(
-                    std::make_index_sequence<sizeof...(_ComposableVectors)>(),
-                    [&](const auto... is) constexpr {
-                        auto lazyScalar    = hana::make_lazy([&](auto i, auto&& scalar) {
-                            composedVector.const_cast_derived()[_INDEX_TUPLE[i]] = scalar;
-                        });
-                        auto lazySubvector = hana::make_lazy([&](auto i, auto&& subvector) {
-                            composedVector.const_cast_derived().template segment<_SIZE_TUPLE[i]>(
-                                _INDEX_TUPLE[i]) = subvector;
-                        });
-
-                        (hana::eval(hana::if_(_SIZE_TUPLE[is] == hana::int_c<1>,
-                                              lazyScalar(is, args),
-                                              lazySubvector(is, args))),
-                         ...);
-                    });
-
-            },
-            _composableVectors);
-    }
-
-    auto ToDynamic() {
-        VectorX<ScalarType> composedVector;
-        In(composedVector);
-        return composedVector;
-    }
-
-    auto ToDynamic() requires ALL_FIXED_SIZES {
-        VectorX<ScalarType> composedVector{COMPOSED_VECTOR_SIZE};
-        In(composedVector);
-        return composedVector;
-    }
-
-    auto ToFixed()  // clang-format off
-    requires ALL_FIXED_SIZES
-    {  // clang-format on
-        Vector<ScalarType, COMPOSED_VECTOR_SIZE> composedVector;
-        In(composedVector);
-        return composedVector;
-    }
-
-  private:
-    std::tuple<_ComposableVectors&&...> _composableVectors;
-};
-
-}  // namespace Internal
-
-template <int... SIZES>
-inline auto Decompose(auto&& vector) {
-    static_assert(dependent_false<decltype(vector)>,
-                  "This function is not implemented for the given input type; consider wrapping it "
-                  "into an Eigen::Ref (or Eigen::Map) object.");
-}
-
-template <int... SIZES, typename _Vector>  // clang-format off
-requires std::same_as<_Vector, const typename std::remove_cvref_t<_Vector>::PlainMatrix&> ||
-         Concepts::EigenConstTypeWrapper<std::remove_cvref_t<_Vector>>
-inline auto Decompose(_Vector&& vector) {  // clang-format on
-    return Internal::Decompose<SIZES...>(std::forward<_Vector>(vector), hana::true_c);
-}
-
-template <int... SIZES, typename _Vector>  // clang-format off
-requires std::same_as<_Vector, typename std::remove_cvref_t<_Vector>::PlainMatrix&> ||
-         Concepts::EigenMutableTypeWrapper<std::remove_cvref_t<_Vector>>
-inline auto Decompose(_Vector&& vector) {  // clang-format on
-    return Internal::Decompose<SIZES...>(std::forward<_Vector>(vector), hana::false_c);
-}
-
-template <Internal::Concepts::ComposableVector... _ComposableVectors>
-inline Internal::ComposeImpl<_ComposableVectors&&...> Compose(
-    _ComposableVectors&&... composableVectors) {
-    return {std::forward<_ComposableVectors>(composableVectors)...};
-}
-
-template <Concepts::Scalar _Scalar, typename _ComposedVector>
-inline auto ComposeIn(const std::vector<RefToConstVectorX<_Scalar>>& vectors,
-                      Eigen::MatrixBase<_ComposedVector> const& composedVector)  // clang-format off
-requires std::same_as<typename _ComposedVector::Scalar, _Scalar> {  // clang-format on
-    for (size_t i = 0UL; const auto& v : vectors) {
-        composedVector.const_cast_derived().segment(i, v.size()) = v;
-        i += v.size();
-    }
-}
-
 inline std::string ToSnakeCase(std::string_view input) {
     std::string output{};
-    for (size_t i = 1UL; const char c : input) {
+    size_t i = 1UL;
+    for (const char c : input) {
         if (std::isdigit(c, std::locale())) {
             output.append(1UL, c);
         } else if (std::isalpha(c, std::locale())) {
@@ -517,120 +246,6 @@ inline std::string ToSnakeCase(std::string_view input) {
     }
 
     return output;
-}
-
-namespace Internal {
-
-template <typename _Scalar>
-struct MutableVectorSegmenter {
-  public:
-    template <typename _Vector>
-    MutableVectorSegmenter(Eigen::MatrixBase<_Vector> const& vector)
-        : _end{vector.const_cast_derived().data()} {
-    }
-
-    MutableVectorSegmenter(_Scalar* const begin) : _end{begin} {
-    }
-
-    _Scalar& Next() {
-        _Scalar* const it = _end;
-        _end              = std::ranges::next(_end);
-        return *it;
-    }
-
-    auto Next(const std::integral auto size) {
-        _Scalar* const begin = _end;
-        _end                 = std::ranges::next(_end, size);
-        return Eigen::Map<VectorX<_Scalar>>{begin, static_cast<index_t>(size)};
-    }
-
-    MutableVectorSegmenter& Skip(const std::integral auto size) {
-        _end = std::ranges::next(_end, size);
-        return *this;
-    }
-
-    auto End() const {
-        return _end;
-    }
-
-  private:
-    _Scalar* _end;
-};
-
-template <class _Vector>
-MutableVectorSegmenter(Eigen::MatrixBase<_Vector> const&)
-    -> MutableVectorSegmenter<typename _Vector::Scalar>;
-
-template <typename _Scalar>
-struct ConstVectorSegmenter {
-  public:
-    template <typename _Vector>
-    ConstVectorSegmenter(const Eigen::MatrixBase<_Vector>& vector) : _end{vector.derived().data()} {
-    }
-
-    ConstVectorSegmenter(const _Scalar* const begin) : _end{begin} {
-    }
-
-    const _Scalar& Next() {
-        const _Scalar* const it = _end;
-        _end                    = std::ranges::next(_end);
-        return *it;
-    }
-
-    auto Next(const std::integral auto size) {
-        const _Scalar* const begin = _end;
-        _end                       = std::ranges::next(_end, size);
-        return Eigen::Map<const VectorX<_Scalar>>{begin, static_cast<index_t>(size)};
-    }
-
-    ConstVectorSegmenter& Skip(const std::integral auto size) {
-        _end = std::ranges::next(_end, size);
-        return *this;
-    }
-
-    auto End() const {
-        return _end;
-    }
-
-  private:
-    const _Scalar* _end;
-};
-
-template <class _Vector>
-ConstVectorSegmenter(const Eigen::MatrixBase<_Vector>&)
-    -> ConstVectorSegmenter<typename _Vector::Scalar>;
-
-}  // namespace Internal
-
-template <typename _Vector>
-inline auto VectorSegmenter(Eigen::MatrixBase<_Vector> const& vector) {
-    static_assert(dependent_false<_Vector>,
-                  "This function is not implemented for the given input type; consider wrapping it "
-                  "into an Eigen::Ref (or Eigen::Map) object.");
-}
-
-template <typename _Vector>  // clang-format off
-requires std::same_as<_Vector, const typename std::remove_cvref_t<_Vector>::PlainMatrix&> ||
-         Concepts::EigenConstTypeWrapper<std::remove_cvref_t<_Vector>>
-inline auto VectorSegmenter(_Vector&& vector) {  // clang-format on
-    return Internal::ConstVectorSegmenter{std::forward<_Vector>(vector)};
-}
-
-template <typename _Scalar>
-inline Internal::ConstVectorSegmenter<_Scalar> VectorSegmenter(const _Scalar* const begin) {
-    return {begin};
-}
-
-template <typename _Vector>  // clang-format off
-requires std::same_as<_Vector, typename std::remove_cvref_t<_Vector>::PlainMatrix&> ||
-         Concepts::EigenMutableTypeWrapper<std::remove_cvref_t<_Vector>>
-inline auto VectorSegmenter(_Vector&& vector) {  // clang-format on
-    return Internal::MutableVectorSegmenter{std::forward<_Vector>(vector)};
-}
-
-template <typename _Scalar>
-inline Internal::MutableVectorSegmenter<_Scalar> VectorSegmenter(_Scalar* const begin) {
-    return {begin};
 }
 
 inline std::filesystem::path TemporaryDirectoryPath(const std::string& directoryNamePrefix = ""s,
@@ -670,7 +285,7 @@ inline Vector3<typename _Derived::Scalar> EstimateLinearVelocity(
     return (position - previousPosition) / stepSize;
 }
 
-template <Concepts::Scalar _Scalar = real_t>
+template <typename _Scalar = real_t>
 inline Vector3<_Scalar> EstimateBodyFrameAngularVelocity(
     const Quaternion<_Scalar>& orientation,
     const Quaternion<_Scalar>& previousOrientation,
@@ -678,7 +293,7 @@ inline Vector3<_Scalar> EstimateBodyFrameAngularVelocity(
     return 2.0 * (previousOrientation.conjugate() * orientation).vec() / stepSize;
 }
 
-template <Concepts::Scalar _Scalar = real_t>
+template <typename _Scalar = real_t>
 inline Vector3<_Scalar> EstimateInertialFrameAngularVelocity(
     const Quaternion<_Scalar>& orientation,
     const Quaternion<_Scalar>& previousOrientation,
@@ -692,14 +307,14 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
     using ScalarType = typename _Vector::Scalar;
     Quaternion<ScalarType> q;
 
-    if constexpr (std::convertible_to<ScalarType, real_t>) {
+    if constexpr (std::is_convertible_v<ScalarType, real_t>) {
         const ScalarType vNorm = v.norm();
         q.vec()                = vNorm > 0.0 ? Vector3<ScalarType>{v * sin(0.5 * vNorm) / vNorm}
                               : Vector3<ScalarType>{v * 0.5};
         q.w() = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
     }
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-    else if constexpr (std::convertible_to<ScalarType, ad_scalar_t>) {
+    else if constexpr (std::is_convertible_v<ScalarType, ad_scalar_t>) {
         static_assert(dependent_false<ScalarType>,
                       "The 'ExponentialMap' function is not implemented for vectors with scalar "
                       "type 'ad_scalar_t'. Use 'ApproximateExponentialMap' instead.");
@@ -746,29 +361,29 @@ inline Quaternion<typename _Vector::Scalar> ApproximateExponentialMap(
     return q;
 }
 
-template <Concepts::Scalar _Scalar>
+template <typename _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Quaternion<_Scalar>& q) {
     return q.conjugate();
 }
 
-template <Concepts::Scalar _Scalar>
+template <typename _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<const Quaternion<_Scalar>>& q) {
     return q.conjugate();
 }
 
-template <Concepts::Scalar _Scalar>
+template <typename _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<Quaternion<_Scalar>>& q) {
     return q.conjugate();
 }
 
-template <Concepts::Scalar _Base, typename _Exponent>
+template <typename _Base, typename _Exponent>
 inline auto Pow(const _Base base, const _Exponent exponent) {
-    if constexpr (std::convertible_to<_Base, real_t>) {
+    if constexpr (std::is_convertible_v<_Base, real_t>) {
         return std::pow(base, exponent);
     }
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-    else if constexpr (std::convertible_to<_Base, ad_scalar_t>) {
-        if constexpr (std::integral<_Exponent>) {
+    else if constexpr (std::is_convertible_v<_Base, ad_scalar_t>) {
+        if constexpr (std::is_integral_v<_Exponent>) {
             return CppAD::pow(base, static_cast<int>(exponent));
         } else {
             return CppAD::pow(base, exponent);
@@ -802,8 +417,9 @@ inline bool HasNaN(const Eigen::SparseMatrixBase<_SparseMatrix>& sparseMatrix) {
     return false;
 }
 
-inline auto ElementaryXRotationMatrix(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryXRotationMatrix(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle);
     const ScalarType s = sin(angle);
     // clang-format off
@@ -812,8 +428,9 @@ inline auto ElementaryXRotationMatrix(const Concepts::Scalar auto angle) {
                                {ScalarType{0.0},  s,                c}};  // clang-format on
 }
 
-inline auto ElementaryYRotationMatrix(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryYRotationMatrix(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle);
     const ScalarType s = sin(angle);
     // clang-format off
@@ -822,8 +439,9 @@ inline auto ElementaryYRotationMatrix(const Concepts::Scalar auto angle) {
                                {-s,               ScalarType{0.0},  c}};  // clang-format on
 }
 
-inline auto ElementaryZRotationMatrix(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryZRotationMatrix(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle);
     const ScalarType s = sin(angle);
     // clang-format off
@@ -832,22 +450,25 @@ inline auto ElementaryZRotationMatrix(const Concepts::Scalar auto angle) {
                                {ScalarType{0.0},  ScalarType{0.0},  ScalarType{1.0}}};  // clang-format on
 }
 
-inline auto ElementaryXQuaternion(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryXQuaternion(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle / ScalarType{2.0});
     const ScalarType s = sin(angle / ScalarType{2.0});
     return Quaternion<ScalarType>{c, s, ScalarType{0.0}, ScalarType{0.0}};
 }
 
-inline auto ElementaryYQuaternion(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryYQuaternion(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle / ScalarType{2.0});
     const ScalarType s = sin(angle / ScalarType{2.0});
     return Quaternion<ScalarType>{c, ScalarType{0.0}, s, ScalarType{0.0}};
 }
 
-inline auto ElementaryZQuaternion(const Concepts::Scalar auto angle) {
-    using ScalarType   = std::remove_cvref_t<decltype(angle)>;
+template <typename _Scalar>
+inline auto ElementaryZQuaternion(const _Scalar angle) {
+    using ScalarType   = remove_cvref_t<decltype(angle)>;
     const ScalarType c = cos(angle / ScalarType{2.0});
     const ScalarType s = sin(angle / ScalarType{2.0});
     return Quaternion<ScalarType>{c, ScalarType{0.0}, ScalarType{0.0}, s};
@@ -856,9 +477,8 @@ inline auto ElementaryZQuaternion(const Concepts::Scalar auto angle) {
 /// @brief A yaw-pitch-roll angles vector 'ypr' is defined so that
 ///        the yaw, pitch and roll angles correspond to 'ypr.z()',
 ///        'ypr.y()' and 'ypr.x()', respectively.
-template <typename _Vector>  // clang-format off
-requires (_Vector::RowsAtCompileTime == 3)
-inline auto RotationMatrixFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
+template <typename _Vector, typename = std::enable_if_t<_Vector::RowsAtCompileTime == 3>>
+inline auto RotationMatrixFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {
     return Matrix3<typename _Vector::Scalar>{ElementaryZRotationMatrix(ypr.z()) *
                                              ElementaryYRotationMatrix(ypr.y()) *
                                              ElementaryXRotationMatrix(ypr.x())};
@@ -867,9 +487,8 @@ inline auto RotationMatrixFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr
 /// @brief A yaw-pitch-roll angles vector 'ypr' is defined so that
 ///        the yaw, pitch and roll angles correspond to 'ypr.z()',
 ///        'ypr.y()' and 'ypr.x()', respectively.
-template <typename _Vector>  // clang-format off
-requires (_Vector::RowsAtCompileTime == 3)
-inline auto QuaternionFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {  // clang-format on
+template <typename _Vector, typename = std::enable_if_t<_Vector::RowsAtCompileTime == 3>>
+inline auto QuaternionFromYawPitchRoll(const Eigen::MatrixBase<_Vector>& ypr) {
     return Quaternion<typename _Vector::Scalar>{ElementaryZQuaternion(ypr.z()) *
                                                 ElementaryYQuaternion(ypr.y()) *
                                                 ElementaryXQuaternion(ypr.x())};
@@ -882,8 +501,9 @@ inline auto QuaternionToYawPitchRoll(const Eigen::QuaternionBase<_Quaternion>& q
 }
 
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-template <typename _Quaternion>  // clang-format off
-requires std::convertible_to<typename _Quaternion::Scalar, ad_scalar_t>
+template <typename _Quaternion,
+          typename = std::enable_if_t<std::is_convertible_v<typename _Quaternion::Scalar,
+                                                            ad_scalar_t>>>  // clang-format off
 inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
     const Eigen::QuaternionBase<_Quaternion>& q) {  // clang-format on
     const Matrix3<typename _Quaternion::Scalar> R = q.toRotationMatrix();
@@ -895,13 +515,13 @@ inline Vector3<typename _Quaternion::Scalar> QuaternionToYawPitchRoll(
 }
 #endif
 
-template <Concepts::Scalar _Scalar>
-inline _Scalar Min(const _Scalar& a, const std::type_identity_t<_Scalar>& b) {
-    if constexpr (std::convertible_to<_Scalar, real_t>) {
+template <typename _Scalar>
+inline _Scalar Min(const _Scalar& a, const type_identity_t<_Scalar>& b) {
+    if constexpr (std::is_convertible_v<_Scalar, real_t>) {
         return std::min(a, b);
     }
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-    else if constexpr (std::convertible_to<_Scalar, ad_scalar_t>) {
+    else if constexpr (std::is_convertible_v<_Scalar, ad_scalar_t>) {
         return CppAD::CondExpGt(a, b, b, a);
     }
 #endif
@@ -910,19 +530,20 @@ inline _Scalar Min(const _Scalar& a, const std::type_identity_t<_Scalar>& b) {
     }
 }
 
-template <Concepts::Scalar _Scalar>
+template <typename _Scalar>
 inline _Scalar SmoothMin(const _Scalar& a,
-                         const std::type_identity_t<_Scalar>& b,
-                         const std::type_identity_t<_Scalar>& alpha = _Scalar{8.0}) {
+                         const type_identity_t<_Scalar>& b,
+                         const type_identity_t<_Scalar>& alpha = _Scalar{8.0}) {
     return (a * exp(-alpha * a) + b * exp(-alpha * b)) / (exp(-alpha * a) + exp(-alpha * b));
 }
 
-template <bool _LOWER_TRIANGULAR = false, typename _Matrix>  // clang-format off
-requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpression<_Matrix>) && (!_Matrix::IsRowMajor)
+template <bool _LOWER_TRIANGULAR = false,
+          typename _Matrix,
+          typename = std::enable_if_t<!_Matrix::IsRowMajor>>
 [[nodiscard]] bool CompareMatrices(const _Matrix& testMatrix,
                                    std::string_view testEntriesLabel,
                                    const MatrixXr& groundTruthMatrix,
-                                   std::string_view groundTruthEntriesLabel) {  // clang-format on
+                                   std::string_view groundTruthEntriesLabel) {
     bool success = true;
 
     const real_t relativeTolerance = 1e-2;
@@ -971,7 +592,7 @@ requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpr
                 ++mismatchCounter;
 
                 if (mismatchCounter > maxMismatches) {
-                    const auto etc = "..."sv;
+                    [[maybe_unused]] const auto etc = "..."sv;
                     UNGAR_LOG(
                         debug, "{:<10}{:<10}{:<20}{:<20}{:<10}  {}", etc, etc, etc, etc, etc, etc);
 
@@ -993,6 +614,8 @@ requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpr
 
     return success;
 }
+
+inline constexpr real_t PI = 3.14159265358979323846;
 
 }  // namespace Utils
 

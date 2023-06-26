@@ -90,15 +90,8 @@ int main() {
     static_assert(variables(u, 4, leg_input, 1, force).Index() == variables(force, 4, 1).Index());
     static_assert(variables(u, 4, leg_input, 2, force).Index() == variables(force, 4, 2).Index());
 
-    // Use verbose notations if you prefer.
-    static_assert(X.At<"x">(0).Index() == X(x, 0).Index());
-    static_assert(X.At<"x">(1).Index() == X(x, 1).Index());
-    static_assert(X.At<"x">(2).Index() == X(x, 2).Index());
-    static_assert(U.At<"u">(8).At<"leg_input">(2).At<"relative_position">().Index() ==
-                  U(relative_position, 8, 2).Index());
-
     /***************     Operate on each subvariable in a given hierarchy.    ***************/
-    const auto getKind = [](Concepts::Variable auto v) {
+    const auto getKind = [](auto v) {
         if (v.IsScalar()) {
             return "'scalar'"s;
         } else if (v.IsVector()) {
@@ -121,7 +114,7 @@ int main() {
 
     UNGAR_LOG(info,
               "Printing all subvariables of 'x' with the format {{ name, index, size, kind }}...");
-    x.ForEach([&](Concepts::Variable auto var) {
+    x.ForEach([&](auto var) {
         UNGAR_LOG(
             info, "{:c}", VariableInfo{var.Name().c_str(), var.Index(), var.Size(), getKind(var)});
     });

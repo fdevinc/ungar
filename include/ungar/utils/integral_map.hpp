@@ -66,29 +66,29 @@ class integral_map {
         return sz;
     }
 
-    constexpr const value_type& at(const std::integral auto key) const {
+    constexpr const value_type& at(const index_t key) const {
         return _array.at(static_cast<size_t>(key)).value();
     }
 
-    constexpr const value_type& operator[](const std::integral auto key) const {
+    constexpr const value_type& operator[](const index_t key) const {
         return *_array[static_cast<size_t>(key)];
     }
 
-    constexpr value_type& at(const std::integral auto key) {
+    constexpr value_type& at(const index_t key) {
         return _array.at(static_cast<size_t>(key)).value();
     }
 
-    constexpr value_type& operator[](const std::integral auto key) {
+    constexpr value_type& operator[](const index_t key) {
         return *_array[static_cast<size_t>(key)];
     }
 
     template <typename... _Args>
-    constexpr void emplace(const std::integral auto key, _Args&&... args) {
+    constexpr void emplace(const index_t key, _Args&&... args) {
         _array[static_cast<size_t>(key)].emplace(std::forward<_Args>(args)...);
     }
 
     template <typename... _Args>
-    constexpr bool try_emplace(const std::integral auto key, _Args&&... args) {
+    constexpr bool try_emplace(const index_t key, _Args&&... args) {
         if (contains(key)) {
             return false;
         } else {
@@ -98,12 +98,12 @@ class integral_map {
     }
 
     template <class _Value>
-    constexpr void insert_or_assign(const std::integral auto key, _Value&& value) {
+    constexpr void insert_or_assign(const index_t key, _Value&& value) {
         _array[static_cast<size_t>(key)] = std::forward<_Value>(value);
     }
 
     template <class _Value>
-    constexpr bool insert(const std::integral auto key, _Value&& value) {
+    constexpr bool insert(const index_t key, _Value&& value) {
         if (contains(key)) {
             return false;
         } else {
@@ -112,7 +112,7 @@ class integral_map {
         }
     }
 
-    constexpr bool contains(const std::integral auto key) const {
+    constexpr bool contains(const index_t key) const {
         return _array[static_cast<size_t>(key)].has_value();
     }
 

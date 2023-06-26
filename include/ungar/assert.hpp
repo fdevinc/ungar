@@ -38,51 +38,49 @@
 namespace Ungar {
 
 inline constexpr long expect(long exp, long c) {
-    if (exp == c) [[likely]] {
+    if (exp == c) {
         return c;
     } else {
         return exp;
     }
 }
 
-inline void assertion_failed(
-    char const* expr, const std::source_location location = std::source_location::current()) {
+inline void assertion_failed(char const* expr,
+                             char const* fileName,
+                             const int line,
+                             char const* functionName) {
 #ifdef UNGAR_CONFIG_ENABLE_LOGGING
-    UNGAR_LOG(error,
-              "{}:{}: {}: Assertion `{}` failed.",
-              location.file_name(),
-              location.line(),
-              location.function_name(),
-              expr);
+    UNGAR_LOG(error, "{}:{}: {}: Assertion `{}` failed.", fileName, line, functionName, expr);
 #else
     std::fprintf(stderr,
                  "%s:%u: %s: Assertion `%s` failed.",
-                 location.file_name(),
-                 location.line(),
-                 location.function_name(),
+                 fileName,
+                 static_cast<unsigned int>(line),
+                 functionName,
                  expr);
 #endif
     std::abort();
 }
 
-inline void assertion_failed_msg(
-    char const* expr,
-    char const* msg,
-    const std::source_location location = std::source_location::current()) {
+inline void assertion_failed_msg(char const* expr,
+                                 char const* msg,
+                                 char const* fileName,
+                                 const int line,
+                                 char const* functionName) {
 #ifdef UNGAR_CONFIG_ENABLE_LOGGING
     UNGAR_LOG(error,
               "{}:{}: {}: Assertion `{} && \"{}\"` failed.",
-              location.file_name(),
-              location.line(),
-              location.function_name(),
+              fileName,
+              line,
+              functionName,
               expr,
               msg);
 #else
     std::fprintf(stderr,
                  "%s:%u: %s: Assertion `%s && \"%s\"` failed.",
-                 location.file_name(),
-                 location.line(),
-                 location.function_name(),
+                 fileName,
+                 static_cast<unsigned int>(line),
+                 functionName,
                  expr,
                  msg);
 #endif
@@ -100,9 +98,13 @@ inline void assertion_failed_msg(
 #define UNGAR_ASSERT_EXPLICIT(expr) ((void)0)
 #define UNGAR_ASSERT_EXPLICIT_MSG(expr, msg) ((void)0)
 #else
-#define UNGAR_ASSERT(expr) (UNGAR_LIKELY(!!(expr)) ? ((void)0) : ::Ungar::assertion_failed(#expr))
+#define UNGAR_ASSERT(expr)              \
+    (UNGAR_LIKELY(!!(expr)) ? ((void)0) \
+                            : ::Ungar::assertion_failed(#expr, __FILE__, __LINE__, __FUNCTION__))
 #define UNGAR_ASSERT_MSG(expr, msg) \
-    (UNGAR_LIKELY(!!(expr)) ? ((void)0) : ::Ungar::assertion_failed_msg(#expr, msg))
+    (UNGAR_LIKELY(!!(expr))         \
+         ? ((void)0)                \
+         : ::Ungar::assertion_failed_msg(#expr, msg, __FILE__, __LINE__, __FUNCTION__))
 #define UNGAR_ASSERT_EXPLICIT(expr) UNGAR_ASSERT(static_cast<bool>(expr))
 #define UNGAR_ASSERT_EXPLICIT_MSG(expr, msg) UNGAR_ASSERT_MSG(static_cast<bool>(expr), msg)
 #endif

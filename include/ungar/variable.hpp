@@ -27,26 +27,30 @@
 #ifndef _UNGAR__VARIABLE_HPP_
 #define _UNGAR__VARIABLE_HPP_
 
+#include <type_traits>
+#include "boost/hana/detail/integral_constant.hpp"
+#include "boost/hana/fwd/integral_constant.hpp"
+#include "boost/hana/fwd/length.hpp"
+#include "boost/hana/fwd/take_while.hpp"
+#include "boost/hana/fwd/tuple.hpp"
+#include "boost/hana/fwd/type.hpp"
+#include "boost/hana/type.hpp"
+#include "ungar/data_types.hpp"
 #include "ungar/utils/utils.hpp"
 
 namespace Ungar {
 
-template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
+template <typename _N, typename _M, index_t _S>
 struct Variable;
 
 template <class _T>
 struct is_variable : std::false_type {};
-template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
+template <typename _N, typename _M, index_t _S>
 struct is_variable<Variable<_N, _M, _S>> : std::true_type {};
 template <class _T>
 constexpr bool is_variable_v = is_variable<_T>::value;
 
-namespace Concepts {
-template <typename _Variable>
-concept Variable = is_variable_v<_Variable>;
-}
-
-template <Concepts::HanaIntegralConstant _Count, Concepts::Variable _Variable>
+template <typename _Count, typename _Variable>
 struct VariableProductExpr {
     constexpr VariableProductExpr(_Count cnt_, _Variable var_) : cnt{cnt_}, var{var_} {
     }
@@ -55,24 +59,17 @@ struct VariableProductExpr {
     _Variable var;
 };
 
-template <Concepts::HanaIntegralConstant _Count, Concepts::Variable _Variable>
+template <typename _Count, typename _Variable>
 VariableProductExpr(_Count cnt_, _Variable var_) -> VariableProductExpr<_Count, _Variable>;
 
 template <class _T>
 struct is_variable_product_expr : std::false_type {};
-template <Concepts::HanaIntegralConstant _Count, Concepts::Variable _Variable>
+template <typename _Count, typename _Variable>
 struct is_variable_product_expr<VariableProductExpr<_Count, _Variable>> : std::true_type {};
 template <class _T>
 constexpr bool is_variable_product_expr_v = is_variable_product_expr<_T>::value;
 
-namespace Concepts {
-template <typename _Variable>
-concept VariableProductExpr = is_variable_product_expr_v<_Variable>;
-}
-
-template <Concepts::HanaString _Name,
-          Concepts::HanaMap _Map = decltype(hana::make_map()),
-          index_t _Size          = 0_idx>
+template <typename _Name, typename _Map = decltype(hana::make_map()), index_t _Size = 0_idx>
 class Variable {
   public:
     constexpr Variable() : _index{0_idx} {
@@ -81,8 +78,8 @@ class Variable {
     constexpr Variable(_Name /* name */) : _index{0_idx} {
     }
 
-    constexpr Variable(_Name /* name */, Concepts::HanaIntegralConstant auto /* size */)
-        : _index{0_idx} {
+    template <typename _IntegralConstant>
+    constexpr Variable(_Name /* name */, _IntegralConstant /* size */) : _index{0_idx} {
     }
 
     static constexpr auto Name() {
@@ -118,165 +115,60 @@ class Variable {
         return _Size == Q;
     }
 
-    constexpr auto operator<<=(Concepts::Variable auto var) const requires(IsBranch()) {
-        auto map = hana::insert(
-            _map, hana::make_pair(var.Name(), var.CloneWithIndexOffset(Index() + SizeC())));
-        return Make(Name(), map, Index(), 0_c);
-    }
+    template <typename _T>
+    constexpr auto operator<<=(_T el) const {
+        static_assert(IsBranch());
 
-    constexpr auto operator<<=(Concepts::HanaTuple auto tuple) const requires(IsBranch()) {
-        auto lambda = [&](auto var, auto el) { return var <<= el; };
-        return hana::fold(tuple, *this, lambda);
-    }
-
-    constexpr auto operator<<=(Concepts::VariableProductExpr auto prodExpr) const
-        requires(IsBranch()) {
-        auto array = hana::unpack(hana::make_range(0_c, prodExpr.cnt), [&](auto... is) {
-            return std::array{prodExpr.var.CloneWithIndexOffset(Index() + SizeC() +
-                                                                prodExpr.var.SizeC() * is)...};
-        });
-        auto map   = hana::insert(_map, hana::make_pair(prodExpr.var.Name(), array));
-        return Make(Name(), map, Index(), 0_c);
-    }
-
-    /**
-     * @todo Improve or add requirements.
-     */
-    template <Concepts::HanaString _N>
-    constexpr const auto& Get(_N name) const
-        requires(hana::contains(hana::keys(_Map{}), _N{}).value) {
-        if constexpr (!is_std_array_v<std::remove_cvref_t<decltype(DefaultMap()[_N{}])>>) {
-            return _map[name];
+        if constexpr (is_variable_v<_T>) {
+            auto& var = el;
+            auto map  = hana::insert(
+                _map, hana::make_pair(var.Name(), var.CloneWithIndexOffset(Index() + SizeC())));
+            return Make(Name(), map, Index(), 0_c);
+        } else if constexpr (is_hana_tuple_v<_T>) {
+            auto& tuple = el;
+            auto lambda = [&](auto var, auto el) { return var <<= el; };
+            return hana::fold(tuple, *this, lambda);
+        } else if constexpr (is_variable_product_expr_v<_T>) {
+            auto& prodExpr = el;
+            auto array     = hana::unpack(hana::make_range(0_c, prodExpr.cnt), [&](auto... is) {
+                return std::array{prodExpr.var.CloneWithIndexOffset(Index() + SizeC() +
+                                                                    prodExpr.var.SizeC() * is)...};
+            });
+            auto map       = hana::insert(_map, hana::make_pair(prodExpr.var.Name(), array));
+            return Make(Name(), map, Index(), 0_c);
         } else {
+            static_assert(dependent_false<_T>);
             Unreachable();
         }
     }
 
-    /**
-     * @todo Improve or add requirements.
-     */
-    constexpr const auto& Get(Concepts::Variable auto var) const {
-        return Get(var.Name());
-    }
+    template <typename _Variable, typename... _Args>
+    constexpr decltype(auto) operator()(_Variable var, _Args... args) const {
+        auto tuple            = hana::make_tuple(hana::type_c<_Args>...);
+        constexpr size_t SIZE = hana::length(hana::take_while(tuple, [](auto t) {
+            using Type              = typename decltype(t)::type;
+            constexpr bool INTEGRAL = std::is_integral_v<Type> || is_hana_integral_constant_v<Type>;
+            return hana::bool_c<INTEGRAL>;
+        }));
 
-    /**
-     * @todo Improve or add requirements.
-     */
-    template <fixed_string _NAME>
-    constexpr const auto& At() const {
-        return Get(string_c<_NAME>);
-    }
-
-    template <Concepts::HanaString _N>
-    constexpr const auto& Get(_N name, const std::integral auto i) const {
-        if constexpr (is_std_array_v<std::remove_cvref_t<decltype(DefaultMap()[_N{}])>>) {
-            return _map[name][static_cast<size_t>(i)];
-        } else {
-            Unreachable();
+        if constexpr (SIZE == 0UL) {
+            return GetImpl0(var.Name(), args...);
+        } else if constexpr (SIZE == 1UL) {
+            return GetImpl1(var.Name(), args...);
+        } else if constexpr (SIZE == 2UL) {
+            return GetImpl2(var.Name(), args...);
+        } else if constexpr (SIZE == 3UL) {
+            return GetImpl3(var.Name(), args...);
         }
     }
 
-    template <Concepts::HanaString _N>
-    constexpr const auto& Get(_N name, Concepts::HanaIntegralConstant auto i) const {
-        return Get(name, i.value);
-    }
-
-    constexpr const auto& Get(Concepts::Variable auto var, const std::integral auto i) const {
-        return Get(var.Name(), i);
-    }
-
-    constexpr const auto& Get(Concepts::Variable auto var,
-                              Concepts::HanaIntegralConstant auto i) const {
-        return Get(var.Name(), i.value);
-    }
-
-    template <fixed_string _NAME>
-    constexpr const auto& At(const std::integral auto i) const {
-        return Get(string_c<_NAME>, i);
-    }
-
-    template <fixed_string _NAME>
-    constexpr const auto& At(Concepts::HanaIntegralConstant auto i) const {
-        return Get(string_c<_NAME>, i.value);
-    }
-
-    constexpr const auto& Get(auto key, auto... args) const
-        requires(hana::contains(hana::keys(_Map{}), decltype(key)::Name()).value) {
-        return Get(key).Get(args...);
-    }
-
-    constexpr const auto& Get(auto key, const std::integral auto i, auto... args) const {
-        return Get(key, i).Get(args...);
-    }
-
-    constexpr const auto& Get(auto key, Concepts::HanaIntegralConstant auto i, auto... args) const {
-        return Get(key, i.value).Get(args...);
-    }
-
-    /**
-     * @todo Improve or add requirements.
-     */
-    constexpr decltype(auto) operator()(Concepts::Variable auto var, auto... args) const {
-        if constexpr (sizeof...(args)) {
-            return BypassImpl(var.Name()).value().get()(args...);
-        } else {
-            return BypassImpl(var.Name()).value().get();
-        }
-    }
-
-    constexpr decltype(auto) operator()(Concepts::Variable auto var,
-                                        const std::integral auto i,
-                                        auto... args) const {
-        if constexpr (sizeof...(args)) {
-            return BypassImpl(var.Name(), i).value().get()(args...);
-        } else {
-            return BypassImpl(var.Name(), i).value().get();
-        }
-    }
-
-    constexpr decltype(auto) operator()(Concepts::Variable auto var,
-                                        Concepts::HanaIntegralConstant auto i,
-                                        auto... args) const {
-        if constexpr (sizeof...(args)) {
-            return BypassImpl(var.Name(), i.value).value().get()(args...);
-        } else {
-            return BypassImpl(var.Name(), i.value).value().get();
-        }
-    }
-
-    constexpr decltype(auto) operator()(Concepts::Variable auto var,
-                                        const std::integral auto i1,
-                                        const std::integral auto i2,
-                                        auto... args) const {
-        if constexpr (sizeof...(args)) {
-            return BypassImpl(var.Name(), i1, i2).value().get()(args...);
-        } else {
-            return BypassImpl(var.Name(), i1, i2).value().get();
-        }
-    }
-
-    /**
-     * @todo Improve or add requirements.
-     */
-    constexpr decltype(auto) operator()(Concepts::Variable auto var,
-                                        const std::integral auto i1,
-                                        const std::integral auto i2,
-                                        const std::integral auto i3,
-                                        auto... args) const {
-        if constexpr (sizeof...(args)) {
-            return BypassImpl(var.Name(), i1, i2, i3).value().get()(args...);
-        } else {
-            return BypassImpl(var.Name(), i1, i2, i3).value().get();
-        }
-    }
-
-    template <typename _State, std::invocable<_State, Variable> _F>
+    template <typename _State, typename _F>
     auto Fold(_State&& state, _F&& f) const {
         return hana::fold(
             hana::values(_map),
             std::forward<_F>(f)(std::forward<_State>(state), *this),
             [&](auto&& s1, const auto& value) {
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                     return hana::fold(
                         value, std::forward<decltype(s1)>(s1), [&](auto&& s2, const auto& var) {
                             return var.Fold(std::forward<decltype(s2)>(s2), std::forward<_F>(f));
@@ -287,19 +179,21 @@ class Variable {
             });
     }
 
-    constexpr auto operator==(Concepts::Variable auto var) const {
-        return boost::hana::bool_c<std::same_as<Variable, decltype(var)>>;
+    template <typename _Variable>
+    constexpr auto operator==(_Variable var) const {
+        return boost::hana::bool_c<std::is_same_v<Variable, decltype(var)>>;
     }
 
-    constexpr auto operator!=(Concepts::Variable auto var) const {
-        return boost::hana::bool_c<!std::same_as<Variable, decltype(var)>>;
+    template <typename _Variable>
+    constexpr auto operator!=(_Variable var) const {
+        return boost::hana::bool_c<!std::is_same_v<Variable, decltype(var)>>;
     }
 
-    template <std::invocable<Variable> _F>
+    template <typename _F>
     constexpr void ForEach(_F&& f) const {
         std::forward<_F>(f)(*this);
         hana::for_each(hana::values(_map), [&](const auto& value) {
-            if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+            if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                 for (const auto& var : value) {
                     var.ForEach(std::forward<_F>(f));
                 }
@@ -310,16 +204,16 @@ class Variable {
     }
 
   private:
-    template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
+    template <typename _N, typename _M, index_t _S>
     friend class Variable;
-    template <typename _Scalar, Concepts::Variable _Variable>
+    template <typename _Scalar, typename _Variable>
     friend class VariableMap;
 
     static constexpr auto DefaultMap() {
         return Variable{}._map;
     }
 
-    template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaIntegralConstant _S>
+    template <typename _N, typename _M, typename _S>
     static constexpr auto Make(_N name, _M map, const index_t index, _S size) {
         return Variable<_N, _M, _S::value>{name, map, index};
     }
@@ -337,7 +231,8 @@ class Variable {
         return var;
     }
 
-    constexpr auto Clone(auto&& /* dummy */) const {
+    template <typename _Dummy>
+    constexpr auto Clone(_Dummy&& /* dummy */) const {
         return Variable{*this};
     }
 
@@ -364,7 +259,47 @@ class Variable {
         }
     }
 
-    template <std::invocable<Variable&> _F>
+    template <typename _N, typename... _Args>
+    constexpr decltype(auto) GetImpl0(_N name, _Args... args) const {
+        if constexpr (sizeof...(args)) {
+            return BypassImpl(name).value().get()(args...);
+        } else {
+            return BypassImpl(name).value().get();
+        }
+    }
+
+    template <typename _N, typename... _Args>
+    constexpr decltype(auto) GetImpl1(_N name, const index_t i, _Args... args) const {
+        if constexpr (sizeof...(args)) {
+            return BypassImpl(name, i).value().get()(args...);
+        } else {
+            return BypassImpl(name, i).value().get();
+        }
+    }
+
+    template <typename _V, typename... _Args>
+    constexpr decltype(auto) GetImpl2(_V name,
+                                      const index_t i1,
+                                      const index_t i2,
+                                      _Args... args) const {
+        if constexpr (sizeof...(args)) {
+            return BypassImpl(name, i1, i2).value().get()(args...);
+        } else {
+            return BypassImpl(name, i1, i2).value().get();
+        }
+    }
+
+    template <typename _N, typename... _Args>
+    constexpr decltype(auto) GetImpl3(
+        _N name, const index_t i1, const index_t i2, const index_t i3, _Args... args) const {
+        if constexpr (sizeof...(args)) {
+            return BypassImpl(name, i1, i2, i3).value().get()(args...);
+        } else {
+            return BypassImpl(name, i1, i2, i3).value().get();
+        }
+    }
+
+    template <typename _F>
     constexpr void ForEach(_F&& f) {
         std::forward<_F>(f)(*this);
 
@@ -373,7 +308,7 @@ class Variable {
         } else {
             hana::for_each(hana::keys(_map), [&](const auto& key) {
                 auto& value = hana::at_key(_map, key);
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                     for (auto& var : value) {
                         var.ForEach(std::forward<_F>(f));
                     }
@@ -384,12 +319,12 @@ class Variable {
         }
     }
 
-    template <typename _State, std::invocable<_State, Variable> _F>
+    template <typename _State, typename _F>
     auto FoldUnique(_State&& state, _F&& f) const {
         return hana::fold(hana::values(_map),
                           std::forward<_F>(f)(std::forward<_State>(state), *this),
                           [&](auto&& s1, const auto& value) {
-                              if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+                              if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                                   if (!value.empty()) {
                                       return value.front().FoldUnique(
                                           std::forward<decltype(s1)>(s1), std::forward<_F>(f));
@@ -403,11 +338,11 @@ class Variable {
                           });
     }
 
-    template <std::invocable<Variable> _F>
+    template <typename _F>
     constexpr void ForEachUnique(_F&& f) const {
         std::forward<_F>(f)(*this);
         hana::for_each(hana::values(_map), [&](const auto& value) {
-            if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+            if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                 if (!value.empty()) {
                     value.front().ForEach(std::forward<_F>(f));
                 }
@@ -417,24 +352,24 @@ class Variable {
         });
     }
 
-    static constexpr auto Union(Concepts::HanaSet auto s1,
-                                Concepts::HanaSet auto s2,
-                                Concepts::HanaSet auto... others) {
+    template <typename _Set1, typename _Set2, typename... _Others>
+    static constexpr auto Union(_Set1 s1, _Set2 s2, _Others... others) {
         return Union(hana::union_(s1, s2), others...);
     }
 
-    static constexpr auto Union(Concepts::HanaSet auto set) {
+    template <typename _Set>
+    static constexpr auto Union(_Set set) {
         return set;
     }
 
-    template <std::invocable<Variable> _Proj = hana::id_t>
+    template <typename _Proj = hana::id_t>
     auto Unique(_Proj&& proj = hana::id) const {
         if constexpr (IsLeaf()) {
             return hana::make_set(std::forward<_Proj>(proj)(Variable{}));
         } else {
             return hana::unpack(hana::values(_map), [&](auto... values) {
                 auto l = [&](auto v) {
-                    if constexpr (is_std_array_v<std::remove_cvref_t<decltype(v)>>) {
+                    if constexpr (is_std_array_v<remove_cvref_t<decltype(v)>>) {
                         if constexpr (!decltype(v){}.empty()) {
                             return v.front().Unique(std::forward<_Proj>(proj));
                         } else {
@@ -449,16 +384,16 @@ class Variable {
         }
     }
 
-    template <Concepts::HanaString _N>
-    constexpr Concepts::HanaOptional auto BypassImpl(_N name) const {
+    template <typename _N>
+    constexpr auto BypassImpl(_N name) const {
         if constexpr (Name() == name) {
-            return hana::just(std::cref(*this));
+            return hana::just(Ungar::cref(*this));
         } else if constexpr (IsLeaf()) {
             return hana::nothing;
         } else {
             auto candidates = hana::transform(hana::keys(_map), [&](const auto& key) {
                 const auto& value = hana::at_key(_map, key);
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
                     return hana::nothing;
                 } else {
                     return value.BypassImpl(name);
@@ -471,8 +406,8 @@ class Variable {
         }
     }
 
-    template <Concepts::HanaString _N>
-    static constexpr Concepts::HanaBool auto IsParentVariableOf(_N name) {
+    template <typename _N>
+    static constexpr auto IsParentVariableOf(_N name) {
         if constexpr (Name() == name) {
             return hana::true_c;
         } else if constexpr (IsLeaf()) {
@@ -491,16 +426,16 @@ class Variable {
         }
     }
 
-    constexpr Concepts::HanaOptional auto BypassImpl(Concepts::HanaString auto name,
-                                                     const std::integral auto i) const {
+    template <typename _N>
+    constexpr auto BypassImpl(_N name, const index_t i) const {
         if constexpr (IsLeaf()) {
             return hana::nothing;
         } else {
             auto candidates = hana::transform(hana::keys(_map), [&](const auto& key) {
                 const auto& value = hana::at_key(_map, key);
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
-                    if constexpr (std::remove_cvref_t<decltype(value)>::value_type::
-                                      IsParentVariableOf(std::remove_cvref_t<decltype(name)>{})) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
+                    if constexpr (remove_cvref_t<decltype(value)>::value_type::IsParentVariableOf(
+                                      remove_cvref_t<decltype(name)>{})) {
                         return value[static_cast<size_t>(i)].BypassImpl(name);
                     } else {
                         return hana::nothing;
@@ -516,18 +451,16 @@ class Variable {
         }
     }
 
-    constexpr Concepts::HanaOptional auto BypassImpl(Concepts::HanaString auto name,
-                                                     const std::integral auto i1,
-                                                     const std::integral auto i2) const {
+    template <typename _N>
+    constexpr auto BypassImpl(_N name, const index_t i1, const index_t i2) const {
         if constexpr (IsLeaf()) {
             return hana::nothing;
         } else {
             auto candidates = hana::transform(hana::keys(_map), [&](const auto& key) {
                 const auto& value = hana::at_key(_map, key);
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
-                    if constexpr (std::remove_cvref_t<decltype(value)>::value_type::
-                                      IsParentVariableOf(std::remove_cvref_t<decltype(name)>{},
-                                                         decltype(i2){})) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
+                    if constexpr (remove_cvref_t<decltype(value)>::value_type::IsParentVariableOf(
+                                      remove_cvref_t<decltype(name)>{}, decltype(i2){})) {
                         return value[static_cast<size_t>(i1)].BypassImpl(name, i2);
                     } else {
                         return hana::nothing;
@@ -543,20 +476,18 @@ class Variable {
         }
     }
 
-    constexpr Concepts::HanaOptional auto BypassImpl(Concepts::HanaString auto name,
-                                                     const std::integral auto i1,
-                                                     const std::integral auto i2,
-                                                     const std::integral auto i3) const {
+    template <typename _N>
+    constexpr auto BypassImpl(_N name, const index_t i1, const index_t i2, const index_t i3) const {
         if constexpr (IsLeaf()) {
             return hana::nothing;
         } else {
             auto candidates = hana::transform(hana::keys(_map), [&](const auto& key) {
                 const auto& value = hana::at_key(_map, key);
-                if constexpr (is_std_array_v<std::remove_cvref_t<decltype(value)>>) {
-                    if constexpr (std::remove_cvref_t<decltype(value)>::value_type::
-                                      IsParentVariableOf(std::remove_cvref_t<decltype(name)>{},
-                                                         decltype(i2){},
-                                                         decltype(i3){})) {
+                if constexpr (is_std_array_v<remove_cvref_t<decltype(value)>>) {
+                    if constexpr (remove_cvref_t<decltype(value)>::value_type::IsParentVariableOf(
+                                      remove_cvref_t<decltype(name)>{},
+                                      decltype(i2){},
+                                      decltype(i3){})) {
                         return value[static_cast<size_t>(i1)].BypassImpl(name, i2, i3);
                     } else {
                         return hana::nothing;
@@ -572,9 +503,8 @@ class Variable {
         }
     }
 
-    static constexpr Concepts::HanaBool auto IsParentVariableOf(Concepts::HanaString auto name,
-                                                                const std::integral auto i,
-                                                                const std::integral auto... is) {
+    template <typename _N, typename... _Integrals>
+    static constexpr auto IsParentVariableOf(_N name, const index_t i, const _Integrals... is) {
         if constexpr (IsLeaf()) {
             return hana::false_c;
         } else {
@@ -601,69 +531,82 @@ class Variable {
     index_t _index;
 };
 
-template <Concepts::HanaString _Name>
+template <typename _Name>
 Variable(_Name name) -> Variable<_Name, decltype(hana::make_map()), 0_idx>;
 
-template <Concepts::HanaString _Name, Concepts::HanaIntegralConstant _Size>
+template <typename _Name, typename _Size>
 Variable(_Name name, _Size size) -> Variable<_Name, decltype(hana::make_map()), _Size::value>;
 
 static_assert(Q != std::numeric_limits<index_t>::max() &&
                   Q_c.value != static_cast<long long>(std::numeric_limits<index_t>::max()),
               "The special value denoting the size of a unit quaternion must be different from the "
               "maximum value that index_t integers can take.");
-template <fixed_string _NAME, index_t _SIZE = std::numeric_limits<index_t>::max()>
-inline constexpr auto var_c = []() {
-    if constexpr (_SIZE == std::numeric_limits<index_t>::max()) {
-        return Variable{string_c<_NAME>};
-    } else {
-        return Variable{string_c<_NAME>, hana::llong_c<static_cast<long long>(_SIZE)>};
-    }
-}();
 
-template <Concepts::HanaString _N, Concepts::HanaMap _M, index_t _S>
-constexpr auto operator*(Concepts::HanaIntegralConstant auto cnt, Variable<_N, _M, _S> var) {
+template <typename _Count,
+          typename _N,
+          typename _M,
+          index_t _S,
+          std::enable_if_t<is_hana_integral_constant_v<_Count>, bool> = true>
+constexpr auto operator*(_Count cnt, Variable<_N, _M, _S> var) {
     return VariableProductExpr{cnt, var};
 }
 
-constexpr auto operator,(Concepts::Variable auto var1, Concepts::Variable auto var2) {
-    return hana::make_tuple(var1, var2);
+template <typename _El1,
+          typename _El2,
+          std::enable_if_t<(is_variable_v<_El1> || is_variable_product_expr_v<_El1>)&&(
+                               is_variable_v<_El2> || is_variable_product_expr_v<_El2>),
+                           bool> = true>
+constexpr auto operator,(_El1 el1, _El2 el2) {
+    return hana::make_tuple(el1, el2);
 }
 
-constexpr auto operator,(Concepts::HanaTuple auto tuple, Concepts::Variable auto var) {
-    return hana::append(tuple, var);
+template <typename _El,
+          typename _Tuple,
+          std::enable_if_t<(is_variable_v<_El> ||
+                            is_variable_product_expr_v<_El>)&&is_hana_tuple_v<_Tuple>,
+                           bool> = true>
+constexpr auto operator,(_El el, _Tuple tuple) {
+    return hana::prepend(tuple, el);
 }
 
-constexpr auto operator,(Concepts::Variable auto var, Concepts::HanaTuple auto tuple) {
-    return hana::prepend(tuple, var);
+template <typename _Tuple,
+          typename _El,
+          std::enable_if_t<is_hana_tuple_v<_Tuple> &&
+                               (is_variable_v<_El> || is_variable_product_expr_v<_El>),
+                           bool> = true>
+constexpr auto operator,(_Tuple tuple, _El el) {
+    return hana::append(tuple, el);
 }
 
-constexpr auto operator,(Concepts::VariableProductExpr auto prodExpr, Concepts::Variable auto var) {
-    return hana::make_tuple(prodExpr, var);
+namespace Internal {
+
+template <index_t _SIZE = std::numeric_limits<index_t>::max()>
+inline constexpr auto var_helper = [](auto name) {
+    if constexpr (_SIZE == std::numeric_limits<index_t>::max()) {
+        return Variable{name};
+    } else {
+        return Variable{name, hana::llong_c<static_cast<long long>(_SIZE)>};
+    }
+};
+
 }
 
-constexpr auto operator,(Concepts::Variable auto var, Concepts::VariableProductExpr auto prodExpr) {
-    return hana::make_tuple(var, prodExpr);
-}
-
-constexpr auto operator,(Concepts::VariableProductExpr auto prodExpr1,
-                         Concepts::VariableProductExpr auto prodExpr2) {
-    return hana::make_tuple(prodExpr1, prodExpr2);
-}
-
-constexpr auto operator,(Concepts::HanaTuple auto tuple,
-                         Concepts::VariableProductExpr auto prodExpr) {
-    return hana::append(tuple, prodExpr);
-}
-
-constexpr auto operator,(Concepts::VariableProductExpr auto prodExpr,
-                         Concepts::HanaTuple auto tuple) {
-    return hana::prepend(tuple, prodExpr);
-}
-
-#define UNGAR_LEAF_VARIABLE(name, size) constexpr auto name = ::Ungar::var_c<#name, size>
-#define UNGAR_BRANCH_VARIABLE(name) constexpr auto name = ::Ungar::var_c<#name>
-#define UNGAR_VARIABLE(name, ...) \
-    constexpr auto name = ::Ungar::var_c<#name __VA_OPT__(, __VA_ARGS__)>
+#define UNGAR_LEAF_VARIABLE(name, size)                                       \
+    constexpr auto name = ::Ungar::Variable {                                 \
+        BOOST_HANA_STRING(#name), hana::llong_c<static_cast<long long>(size)> \
+    }
+#define UNGAR_BRANCH_VARIABLE(name)           \
+    constexpr auto name = ::Ungar::Variable { \
+        BOOST_HANA_STRING(#name)              \
+    }
+#define _UNGAR_STRINGIZE_FIRST_ARG(first, ...) #first
+#define _UNGAR_FIRST_ARG(first, ...) first
+#define _UNGAR_SECOND_ARG(first, second, ...) second
+#define UNGAR_VARIABLE(...)                                            \
+    constexpr auto _UNGAR_FIRST_ARG(__VA_ARGS__, dummy) =              \
+        ::Ungar::Internal::var_helper<_UNGAR_SECOND_ARG(               \
+            __VA_ARGS__, std::numeric_limits<index_t>::max(), dummy)>( \
+            BOOST_HANA_STRING(_UNGAR_STRINGIZE_FIRST_ARG(__VA_ARGS__, dummy)))
 
 }  // namespace Ungar
 

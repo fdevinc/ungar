@@ -27,19 +27,21 @@
 #ifndef _UNGAR__VARIABLE_LAZY_MAP_HPP_
 #define _UNGAR__VARIABLE_LAZY_MAP_HPP_
 
+#include <type_traits>
+#include "ungar/data_types.hpp"
 #include "ungar/variable.hpp"
 
 namespace Ungar {
 
-template <typename _Scalar, Concepts::Variable _Variable, Concepts::HanaBool _EnableMutableMembers>
+template <typename _Scalar, typename _Variable, bool _ENABLE_MUTABLE_MEMBERS>
 class VariableLazyMap {
   private:
     template <typename _Underlying>
     static constexpr auto UnderlyingSize(hana::basic_type<_Underlying>) {
-        if constexpr (Concepts::DenseMatrixExpression<_Underlying>) {
-            return std::remove_cvref_t<_Underlying>::RowsAtCompileTime;
+        if constexpr (is_dense_vector_expression_v<_Underlying>) {
+            return remove_cvref_t<_Underlying>::RowsAtCompileTime;
         } else {
-            return static_cast<index_t>(std::ranges::size(_Underlying{}));
+            return static_cast<index_t>(nano::ranges::size(_Underlying{}));
         }
     }
 
@@ -60,17 +62,21 @@ class VariableLazyMap {
         UNGAR_ASSERT(underlying.size() == var.Size() && !var.Index());
     }
 
-    template <typename _Underlying>
-    constexpr VariableLazyMap(const _Underlying& underlying, const _Variable& var) requires(
-        UnderlyingSize(hana::type_c<_Underlying>) == static_cast<size_t>(_Variable::Size()))
-        : _data{std::ranges::data(underlying)}, _variable{var} {
+    template <
+        typename _Underlying,
+        typename _V,
+        std::enable_if_t<UnderlyingSize(hana::type_c<_Underlying>) == _V::Size(), bool> = true>
+    constexpr VariableLazyMap(const _Underlying& underlying, const _V& var)
+        : _data{nano::ranges::data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
 
-    template <typename _Underlying>
-    constexpr VariableLazyMap(_Underlying& underlying, const _Variable& var) requires(
-        UnderlyingSize(hana::type_c<_Underlying>) == static_cast<size_t>(_Variable::Size()))
-        : _data{std::ranges::data(underlying)}, _variable{var} {
+    template <
+        typename _Underlying,
+        typename _V,
+        std::enable_if_t<UnderlyingSize(hana::type_c<_Underlying>) == _V::Size(), bool> = true>
+    constexpr VariableLazyMap(_Underlying& underlying, const _V& var)
+        : _data{nano::ranges::data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
 
@@ -78,20 +84,27 @@ class VariableLazyMap {
         return Get1(_variable);
     }
 
-    decltype(auto) Get() requires _EnableMutableMembers::value {
+    template <typename _Dummy = _Scalar,
+              std::enable_if_t<dependent_bool_value<_ENABLE_MUTABLE_MEMBERS, _Dummy>, bool> = true>
+    decltype(auto) Get() {
         return Get1(_variable);
     }
 
-    decltype(auto) Get(auto&&... args) const {
+    template <typename... _Args>
+    decltype(auto) Get(_Args&&... args) const {
         return Get1(_variable(std::forward<decltype(args)>(args)...));
     }
 
-    decltype(auto) Get(auto&&... args) requires _EnableMutableMembers::value {
+    template <
+        typename... _Args,
+        std::enable_if_t<dependent_bool_value<_ENABLE_MUTABLE_MEMBERS, _Args...>, bool> = true>
+    decltype(auto) Get(_Args&&... args) {
         return Get1(_variable(std::forward<decltype(args)>(args)...));
     }
 
-    decltype(auto) Get1(const Concepts::Variable auto& var) const {
-        using VariableType = std::remove_cvref_t<decltype(var)>;
+    template <typename _V>
+    decltype(auto) Get1(const _V& var) const {
+        using VariableType = remove_cvref_t<decltype(var)>;
         if constexpr (VariableType::Size() == 1_idx) {
             return GetImpl(var).get();
         } else {
@@ -99,8 +112,10 @@ class VariableLazyMap {
         }
     }
 
-    decltype(auto) Get1(const Concepts::Variable auto& var) {
-        using VariableType = std::remove_cvref_t<decltype(var)>;
+    template <typename _V,
+              std::enable_if_t<dependent_bool_value<_ENABLE_MUTABLE_MEMBERS, _V>, bool> = true>
+    decltype(auto) Get1(const _V& var) {
+        using VariableType = remove_cvref_t<decltype(var)>;
         if constexpr (VariableType::Size() == 1_idx) {
             return GetImpl(var).get();
         } else {
@@ -109,8 +124,9 @@ class VariableLazyMap {
     }
 
   protected:
-    auto GetImpl(const Concepts::Variable auto& var) const {
-        using VariableType = std::remove_cvref_t<decltype(var)>;
+    template <typename _V>
+    auto GetImpl(const _V& var) const {
+        using VariableType = remove_cvref_t<decltype(var)>;
         if constexpr (VariableType::IsQuaternion()) {
             return Eigen::Map<const Quaternion<_Scalar>>{_data + var.Index()};
         } else {
@@ -126,8 +142,10 @@ class VariableLazyMap {
         }
     }
 
-    auto GetImpl(const Concepts::Variable auto& var) requires _EnableMutableMembers::value {
-        using VariableType = std::remove_cvref_t<decltype(var)>;
+    template <typename _V,
+              std::enable_if_t<dependent_bool_value<_ENABLE_MUTABLE_MEMBERS, _V>, bool> = true>
+    auto GetImpl(const _V& var) {
+        using VariableType = remove_cvref_t<decltype(var)>;
         if constexpr (VariableType::IsQuaternion()) {
             return Eigen::Map<Quaternion<_Scalar>>{const_cast<_Scalar*>(_data) + var.Index()};
         } else {
@@ -145,28 +163,32 @@ class VariableLazyMap {
     }
 
   private:
-    template <typename _Sc, Concepts::Variable _Var>
+    template <typename _Sc, typename _Var>
     friend class VariableMap;
 
     const _Scalar* _data;
     _Variable _variable;
 };
 
-VariableLazyMap(const auto& underlying, const Concepts::Variable auto& var)
-    -> VariableLazyMap<std::remove_cvref_t<decltype(*std::ranges::data(underlying))>,
-                       std::remove_cvref_t<decltype(var)>,
-                       hana::bool_<false>>;
+template <typename _Underlying, typename _Variable>
+VariableLazyMap(const _Underlying& underlying, const _Variable& var)
+    -> VariableLazyMap<remove_cvref_t<decltype(*nano::ranges::data(underlying))>,
+                       remove_cvref_t<decltype(var)>,
+                       false>;
 
-VariableLazyMap(auto& underlying, const Concepts::Variable auto& var)
-    -> VariableLazyMap<std::remove_reference_t<decltype(*std::ranges::data(underlying))>,
-                       std::remove_cvref_t<decltype(var)>,
-                       hana::bool_<true>>;
+template <typename _Underlying, typename _Variable>
+VariableLazyMap(_Underlying& underlying, const _Variable& var)
+    -> VariableLazyMap<std::remove_reference_t<decltype(*nano::ranges::data(underlying))>,
+                       remove_cvref_t<decltype(var)>,
+                       true>;
 
-inline static auto MakeVariableLazyMap(const auto& underlying, const Concepts::Variable auto& var) {
+template <typename _Underlying, typename _Variable>
+inline static auto MakeVariableLazyMap(const _Underlying& underlying, const _Variable& var) {
     return VariableLazyMap{underlying, var};
 }
 
-inline static auto MakeVariableLazyMap(auto& underlying, const Concepts::Variable auto& var) {
+template <typename _Underlying, typename _Variable>
+inline static auto MakeVariableLazyMap(_Underlying& underlying, const _Variable& var) {
     return VariableLazyMap{underlying, var};
 }
 

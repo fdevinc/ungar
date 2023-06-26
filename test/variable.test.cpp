@@ -26,6 +26,7 @@
 
 #include <gtest/gtest.h>
 
+#include "ungar/variable.hpp"
 #include "ungar/variable_map.hpp"
 
 namespace Ungar {
@@ -36,23 +37,22 @@ constexpr auto N         = 10_c;
 constexpr auto NUM_IPMS  = 4_c;
 constexpr auto NUM_SRBDS = 2_c;
 
-constexpr auto position           = var_c<"position", 3>;
-constexpr auto orientation        = var_c<"orientation", Q>;
-constexpr auto linear_velocity    = var_c<"linear_velocity", 3>;
-constexpr auto b_angular_velocity = var_c<"b_angular_velocity", 3>;
+UNGAR_VARIABLE(position, 3);
+UNGAR_VARIABLE(orientation, Q);
+UNGAR_VARIABLE(linear_velocity, 3);
+UNGAR_VARIABLE(b_angular_velocity, 3);
 
-constexpr auto srbd_state = var_c<"srbd_state"> <<=
-    (position, orientation, linear_velocity, b_angular_velocity);
-constexpr auto ipm_state = var_c<"ipm_state"> <<= (position, linear_velocity);
+UNGAR_VARIABLE(srbd_state) <<= (position, orientation, linear_velocity, b_angular_velocity);
+UNGAR_VARIABLE(ipm_state) <<= (position, linear_velocity);
 
-constexpr auto x = var_c<"x"> <<= (NUM_IPMS * ipm_state, NUM_SRBDS* srbd_state);
-constexpr auto X = var_c<"X"> <<= N * x;
+UNGAR_VARIABLE(x) <<= (NUM_IPMS * ipm_state, NUM_SRBDS* srbd_state);
+UNGAR_VARIABLE(X) <<= N * x;
 
-constexpr auto ipm_mass  = var_c<"ipm_mass", 1>;
-constexpr auto srbd_mass = var_c<"srbd_mass", 1>;
-constexpr auto Rho       = var_c<"Rho"> <<= (NUM_IPMS * ipm_mass, NUM_SRBDS* srbd_mass);
+UNGAR_VARIABLE(ipm_mass, 1);
+UNGAR_VARIABLE(srbd_mass, 1);
+UNGAR_VARIABLE(Rho) <<= (NUM_IPMS * ipm_mass, NUM_SRBDS* srbd_mass);
 
-constexpr auto rollout_variables = var_c<"rollout_variables"> <<= (X, Rho);
+UNGAR_VARIABLE(rollout_variables) <<= (X, Rho);
 
 TEST(RolloutVariablesTest, VariableMapAccess) {
     using namespace Ungar;

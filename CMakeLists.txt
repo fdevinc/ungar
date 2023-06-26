@@ -4,17 +4,17 @@ project(Ungar VERSION 1.0.0)
 
 add_library(ungar INTERFACE)
 add_library(ungar::ungar ALIAS ungar)
-target_compile_features(ungar INTERFACE cxx_std_20)
+target_compile_features(ungar INTERFACE cxx_std_17)
 
 # ##############################################################################
 # Set up CMake options.
 # ##############################################################################
-option(UNGAR_BUILD_TESTS "Add targets for unit testing." OFF)
-option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." OFF)
-option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." OFF)
-option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." OFF)
+option(UNGAR_BUILD_TESTS "Add targets for unit testing." ON)
+option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." ON)
+option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." ON)
+option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." ON)
 option(UNGAR_ENABLE_OPTIMIZATION
-       "Enable Ungar's nonlinear programming interface." OFF)
+       "Enable Ungar's nonlinear programming interface." ON)
 
 if(UNGAR_ENABLE_AUTODIFF AND NOT UNGAR_ENABLE_LOGGING)
   message(
@@ -47,11 +47,13 @@ add_subdirectory(external)
 # Add compile options.
 # ##############################################################################
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Clang.
-  message(WARNING "Clang is not supported.")
+  target_compile_options(ungar INTERFACE "-pedantic" "-pedantic-errors"
+                                         "$<$<CONFIG:RELEASE>:-O2>")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # GNU Compiler Collection (GCC).
   target_compile_options(
     ungar
     INTERFACE "-pedantic"
+              "-pedantic-errors"
               "-ftemplate-backtrace-limit=1"
               "-fconstexpr-depth=2147483647"
               "-fconstexpr-loop-limit=2147483647"

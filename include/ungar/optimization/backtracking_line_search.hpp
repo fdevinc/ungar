@@ -27,31 +27,12 @@
 #ifndef _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 #define _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 
+#include <type_traits>
+#include "boost/hana/fwd/type.hpp"
 #include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
 
 namespace Ungar {
-namespace Concepts {
-
-// clang-format off
-template <typename _CostFunction, typename _W>
-concept CostFunction = Ungar::Concepts::DenseVectorExpression<_W> &&
-    requires (const _CostFunction costFunction, Eigen::MatrixBase<_W> w) {
-        requires std::same_as<typename _W::Scalar, real_t>;
-        { costFunction(w) } -> std::same_as<real_t>;
-};
-// clang-format on
-
-// clang-format off
-template <typename _ConstraintViolation, typename _W>
-concept ConstraintViolation = Ungar::Concepts::DenseVectorExpression<_W> &&
-    requires (const _ConstraintViolation constraintViolation, Eigen::MatrixBase<_W> w) {
-        requires std::same_as<typename _W::Scalar, real_t>;
-        { constraintViolation(w) } -> std::same_as<real_t>;
-};
-// clang-format on
-
-}  // namespace Concepts
 
 class BacktrackingLineSearch {
   public:
@@ -66,22 +47,20 @@ class BacktrackingLineSearch {
                                  (real_t, gammaAlpha));
     };
 
-    constexpr BacktrackingLineSearch(const bool verbose,
-                                     Parameters parameters = {.alphaMin   = 1e-4,
-                                                              .thetaMin   = 1e-6,
-                                                              .thetaMax   = 1e-2,
-                                                              .eta        = 1e-4,
-                                                              .gammaPhi   = 1e-6,
-                                                              .gammaTheta = 1e-6,
-                                                              .gammaAlpha = 0.5})
+    constexpr BacktrackingLineSearch(
+        const bool verbose, Parameters parameters = {1e-4, 1e-6, 1e-2, 1e-4, 1e-6, 1e-6, 0.5})
         : _verbose{verbose}, _parameters(std::move(parameters)) {
     }
 
-    template <typename _CostFunctionGradient, typename _SearchDirection, typename _W>
+    template <typename _CostFunctionGradient,
+              typename _SearchDirection,
+              typename _CostFunction,
+              typename _ConstraintViolation,
+              typename _W>
     [[nodiscard]] bool Do(const Eigen::MatrixBase<_CostFunctionGradient>& costFunctionGradient,
                           const Eigen::MatrixBase<_SearchDirection>& dw,
-                          const Concepts::CostFunction<_W> auto& costFunction,
-                          const Concepts::ConstraintViolation<_W> auto& constraintViolation,
+                          const _CostFunction& costFunction,
+                          const _ConstraintViolation& constraintViolation,
                           Eigen::MatrixBase<_W> const& w,
                           const bool verbose = false) const {
         UNGAR_ASSERT(costFunctionGradient.cols() == 1_idx);

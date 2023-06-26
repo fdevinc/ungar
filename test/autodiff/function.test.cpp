@@ -27,6 +27,7 @@
 #include <gtest/gtest.h>
 
 #include "ungar/autodiff/function.hpp"
+#include "ungar/data_types.hpp"
 
 namespace {
 
@@ -37,8 +38,9 @@ TEST(FunctionTest, ExponentialMap) {
     const index_t xSize = 3;
     const index_t pSize = 0;
 
-    auto exp = []<typename _Scalar>(const VectorX<_Scalar>& x, VectorX<_Scalar>& y) -> void {
-        y = Utils::ApproximateExponentialMap(RefToConstVector3<_Scalar>{x}).coeffs();
+    auto exp = [](const auto& x, auto& y) -> void {
+        using ScalarType = typename remove_cvref_t<decltype(x)>::Scalar;
+        y = Utils::ApproximateExponentialMap(RefToConstVector3<ScalarType>{x}).coeffs();
         /// @note CppADCodeGen does not support the following line.
         // Utils::ExponentialMap(RefToConstVector3<_Scalar>{independentVariable}).coeffs();
     };
@@ -52,7 +54,8 @@ TEST(FunctionTest, ExponentialMap) {
     ASSERT_TRUE(function.TestJacobian(x));
 
     for (const auto i : enumerate(1024)) {
-        x = Vector3r::Random();
+        std::ignore = i;
+        x           = Vector3r::Random();
         ASSERT_TRUE(function.TestFunction(
             x, [&](const Vector3r& x) { return Utils::ExponentialMap(x).coeffs(); }));
     }
@@ -67,16 +70,18 @@ TEST(FunctionTest, Jacobian) {
     const index_t xSize                      = INDEPENDENT_VARIABLE_SIZE;
     const index_t pSize                      = PARAMETER_SIZE;
 
-    auto f = []<typename _Scalar>(const VectorX<_Scalar>& xp, VectorX<_Scalar>& y) -> void {
-        const auto [x, p] = Utils::Decompose<INDEPENDENT_VARIABLE_SIZE, PARAMETER_SIZE>(xp);
-        y                 = VectorX<_Scalar>{{p * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)}};
+    auto f = [](const auto& xp, auto& y) -> void {
+        using ScalarType                      = typename remove_cvref_t<decltype(xp)>::Scalar;
+        const RefToConstVectorX<ScalarType> x = xp.head(INDEPENDENT_VARIABLE_SIZE);
+        const RefToConstVectorX<ScalarType> p = xp.tail(PARAMETER_SIZE);
+        y = (VectorX<ScalarType>{2} << p * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)).finished();
     };
     Function::Blueprint blueprint{f, xSize, pSize, "jacobian_test", EnabledDerivatives::JACOBIAN};
     Function function = MakeFunction(blueprint, true);
 
     const VectorXr x  = VectorXr::Random(xSize);
     const VectorXr p  = VectorXr::Random(pSize);
-    const VectorXr xp = Utils::Compose(x, p).ToDynamic();
+    const VectorXr xp = (VectorXr{x.size() + p.size()} << x, p).finished();
 
     const VectorXr yGroundTruth = VectorXr{{p[0_idx] * x.squaredNorm(), 2.0 * pow(x[0_idx], 2)}};
     const MatrixXr jacobianGroundTruth = MatrixXr{{2.0 * p[0_idx] * x[0_idx],
@@ -93,18 +98,18 @@ TEST(FunctionTest, Jacobian) {
     UNGAR_LOG(trace, "Testing function Jacobian...");
     ASSERT_TRUE(function.Jacobian(xp).isApprox(jacobianGroundTruth));
 
-    ASSERT_TRUE(function.Jacobian(xp).isApprox(jacobianGroundTruth));
-
-    for (auto func =
-             [&](const VectorXr& xp) {
-                 VectorXr y;
-                 f.template operator()<real_t>(xp, y);
-                 return y;
-             };
-         const auto i : enumerate(1024)) {
-        VectorXr xp = VectorXr::Random(xSize + pSize);
-        EXPECT_TRUE(function.TestFunction(xp, func));
-        EXPECT_TRUE(function.TestJacobian(xp));
+    {
+        auto func = [&](const VectorXr& xp) {
+            VectorXr y;
+            f(xp, y);
+            return y;
+        };
+        for (const auto i : enumerate(1024)) {
+            std::ignore = i;
+            VectorXr xp = VectorXr::Random(xSize + pSize);
+            EXPECT_TRUE(function.TestFunction(xp, func));
+            EXPECT_TRUE(function.TestJacobian(xp));
+        }
     }
 }
 
@@ -117,16 +122,18 @@ TEST(FunctionTest, Hessian) {
     const index_t xSize                      = INDEPENDENT_VARIABLE_SIZE;
     const index_t pSize                      = PARAMETER_SIZE;
 
-    auto f = []<typename _Scalar>(const VectorX<_Scalar>& xp, VectorX<_Scalar>& y) -> void {
-        const auto [x, p] = Utils::Decompose<INDEPENDENT_VARIABLE_SIZE, PARAMETER_SIZE>(xp);
-        y                 = VectorX<_Scalar>{{p * x.squaredNorm()}};
+    auto f = [](const auto& xp, auto& y) -> void {
+        using ScalarType                      = typename remove_cvref_t<decltype(xp)>::Scalar;
+        const RefToConstVectorX<ScalarType> x = xp.head(INDEPENDENT_VARIABLE_SIZE);
+        const RefToConstVectorX<ScalarType> p = xp.tail(PARAMETER_SIZE);
+        y = (VectorX<ScalarType>{1_idx} << p * x.squaredNorm()).finished();
     };
     Function::Blueprint blueprint{f, xSize, pSize, "hessian_test", EnabledDerivatives::HESSIAN};
     Function function = MakeFunction(blueprint, true);
 
     const VectorXr x  = VectorXr::Random(xSize);
     const VectorXr p  = VectorXr::Random(pSize);
-    const VectorXr xp = Utils::Compose(x, p).ToDynamic();
+    const VectorXr xp = (VectorXr{x.size() + p.size()} << x, p).finished();
 
     const MatrixXr hessianGroundTruth = 2.0 * p[0_idx] * MatrixXr::Identity(4_idx, 4_idx);
 
@@ -136,6 +143,7 @@ TEST(FunctionTest, Hessian) {
     ASSERT_TRUE(function.Hessian(xp).isApprox(hessianGroundTruth));
 
     for (const auto i : enumerate(1024)) {
+        std::ignore = i;
         VectorXr xp = VectorXr::Random(xSize + pSize);
         EXPECT_TRUE(function.TestHessian(xp));
     }

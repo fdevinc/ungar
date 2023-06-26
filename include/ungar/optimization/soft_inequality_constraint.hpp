@@ -39,19 +39,19 @@ class LogisticFunction {
         : _midpoint{midpoint}, _steepness{steepness}, _maximumValue{maximumValue} {
     }
 
-    template <Ungar::Concepts::Scalar _Scalar>
+    template <typename _Scalar>
     _Scalar Evaluate(const _Scalar& x) const {
         return _maximumValue / (1.0 + exp(-_steepness * (x - _midpoint)));
     }
 
-    template <Ungar::Concepts::Scalar _Scalar>
+    template <typename _Scalar>
     static constexpr _Scalar SmoothGreaterThan(const _Scalar x,
                                                const real_t lhs,
                                                const real_t steepness = 1024.0) {
         return LogisticFunction{lhs, steepness}.Evaluate<_Scalar>(x);
     }
 
-    template <Ungar::Concepts::Scalar _Scalar>
+    template <typename _Scalar>
     static constexpr _Scalar SmoothLessThan(const _Scalar x,
                                             const real_t lhs,
                                             const real_t steepness = 1024.0) {
@@ -85,7 +85,7 @@ class SoftInequalityConstraint {
           _d2{_c1} {
     }
 
-    template <Ungar::Concepts::Scalar _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
+    template <typename _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
     _Scalar Evaluate(const _Scalar& lhs) const {
         if constexpr (NO_CONDITIONAL_APPROXIMATION) {
             return EvaluateNoConditionalApproximationImpl(lhs - _rhs);
@@ -94,7 +94,7 @@ class SoftInequalityConstraint {
         }
     }
 
-    template <Ungar::Concepts::Scalar _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
+    template <typename _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
     _Scalar Evaluate(const RefToConstVectorX<_Scalar>& lhs) const {
         return (lhs.array() - _rhs)
             .unaryExpr([this](const auto& coeff) -> _Scalar {
@@ -129,7 +129,7 @@ class SoftInequalityConstraint {
                              ad_scalar_t{0.0}));
     }
 
-    template <Ungar::Concepts::Scalar _Scalar>
+    template <typename _Scalar>
     _Scalar EvaluateNoConditionalApproximationImpl(const _Scalar& x) const {
         const real_t steepness = 1.0 / _epsilon;
         return LogisticFunction::SmoothLessThan(x, 0.0, steepness) *
@@ -155,13 +155,13 @@ class SoftBoundConstraint {
           _upperBound{-upperBound, stiffness, _epsilon} {
     }
 
-    template <Ungar::Concepts::Scalar _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
+    template <typename _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
     _Scalar Evaluate(const _Scalar& x) const {
         return _lowerBound.Evaluate<_Scalar, NO_CONDITIONAL_APPROXIMATION>(x) +
                _upperBound.Evaluate<_Scalar, NO_CONDITIONAL_APPROXIMATION>(-x);
     }
 
-    template <Ungar::Concepts::Scalar _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
+    template <typename _Scalar, bool NO_CONDITIONAL_APPROXIMATION = false>
     _Scalar Evaluate(const RefToConstVectorX<_Scalar>& x) const {
         return _lowerBound.Evaluate<_Scalar, NO_CONDITIONAL_APPROXIMATION>(x) +
                _upperBound.Evaluate<_Scalar, NO_CONDITIONAL_APPROXIMATION>(-x);

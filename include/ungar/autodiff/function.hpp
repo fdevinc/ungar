@@ -28,9 +28,11 @@
 #define _UNGAR__AUTODIFF__FUNCTION_HPP_
 
 #include <finitediff.hpp>
+#include <type_traits>
 
 #include "ungar/autodiff/data_types.hpp"
 #include "ungar/autodiff/support/quaternion.hpp"
+#include "ungar/data_types.hpp"
 #include "ungar/io/logging.hpp"
 #include "ungar/utils/passkey.hpp"
 #include "ungar/utils/utils.hpp"
@@ -113,14 +115,18 @@ class Function {  // clang-format on
             _jacobianInnerStarts.clear();
             _jacobianInnerStarts.reserve(_dependentVariableSize + 1UL);
             _jacobianInnerStarts.emplace_back(0);
-            for (int i = 0; const int j : enumerate(static_cast<int>(_dependentVariableSize))) {
-                if (i < static_cast<int>(_nnzJacobian)) {
-                    while (i < _nnzJacobian && rows[i] == j) {
-                        ++i;
+            {
+                int i = 0;
+                for (const int j : enumerate(static_cast<int>(_dependentVariableSize))) {
+                    if (i < static_cast<int>(_nnzJacobian)) {
+                        while (i < static_cast<int>(_nnzJacobian) &&
+                               static_cast<int>(rows[i]) == j) {
+                            ++i;
+                        }
+                        _jacobianInnerStarts.emplace_back(i);
+                    } else {
+                        _jacobianInnerStarts.emplace_back(_jacobianInnerStarts.back());
                     }
-                    _jacobianInnerStarts.emplace_back(i);
-                } else {
-                    _jacobianInnerStarts.emplace_back(_jacobianInnerStarts.back());
                 }
             }
 
@@ -153,14 +159,18 @@ class Function {  // clang-format on
             _hessianInnerStarts.clear();
             _hessianInnerStarts.reserve(_independentVariableSize + 1UL);  // n rows
             _hessianInnerStarts.emplace_back(0);
-            for (int i = 0; const int j : enumerate(static_cast<int>(_independentVariableSize))) {
-                if (i < static_cast<int>(_nnzHessian)) {
-                    while (i < static_cast<int>(_nnzHessian) && rows[i] == j) {
-                        ++i;
+            {
+                int i = 0;
+                for (const int j : enumerate(static_cast<int>(_independentVariableSize))) {
+                    if (i < static_cast<int>(_nnzHessian)) {
+                        while (i < static_cast<int>(_nnzHessian) &&
+                               static_cast<int>(rows[i]) == j) {
+                            ++i;
+                        }
+                        _hessianInnerStarts.emplace_back(i);
+                    } else {
+                        _hessianInnerStarts.emplace_back(_hessianInnerStarts.back());
                     }
-                    _hessianInnerStarts.emplace_back(i);
-                } else {
-                    _hessianInnerStarts.emplace_back(_hessianInnerStarts.back());
                 }
             }
 
@@ -175,12 +185,14 @@ class Function {  // clang-format on
         }
     }
 
-    Function(Function&& rhs)            = default;
+    Function(Function&& rhs) = default;
     Function& operator=(Function&& rhs) = default;
 
-    template <typename _XP, typename _Y>  // clang-format off
-    requires Concepts::Same<real_t, typename _XP::Scalar, typename _Y::Scalar>
-    void Evaluate(const Eigen::MatrixBase<_XP>& xp, Eigen::MatrixBase<_Y> const& y) const {  // clang-format on
+    template <
+        typename _XP,
+        typename _Y,
+        std::enable_if_t<same_v<real_t, typename _XP::Scalar, typename _Y::Scalar>, bool> = true>
+    void Evaluate(const Eigen::MatrixBase<_XP>& xp, Eigen::MatrixBase<_Y> const& y) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
         UNGAR_ASSERT(y.size() == _dependentVariableSize);
 
@@ -190,23 +202,26 @@ class Function {  // clang-format on
                                          static_cast<size_t>(y.size())});
     }
 
-    template <typename _XP, Ungar::Concepts::ContiguousRangeOf<real_t> _Y>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t>
+    template <typename _XP,
+              typename _Y,
+              std::enable_if_t<contiguous_range_of_v<_Y, real_t> &&
+                                   std::is_same_v<real_t, typename _XP::Scalar>,
+                               bool> = true>  // clang-format off
     void Evaluate(const Eigen::MatrixBase<_XP>& xp, _Y&& y) const {  // clang-format on
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
-        UNGAR_ASSERT(static_cast<index_t>(std::ranges::size(std::forward<_Y>(y))) ==
+        UNGAR_ASSERT(static_cast<index_t>(nano::ranges::size(std::forward<_Y>(y))) ==
                      _dependentVariableSize);
 
         _model->ForwardZero(
             CppAD::cg::ArrayView<const real_t>{xp.derived().data(), static_cast<size_t>(xp.size())},
             CppAD::cg::ArrayView<real_t>{
-                std::ranges::data(std::forward<_Y>(y)),
-                static_cast<size_t>(std::ranges::size(std::forward<_Y>(y)))});
+                nano::ranges::data(std::forward<_Y>(y)),
+                static_cast<size_t>(nano::ranges::size(std::forward<_Y>(y)))});
     }
 
-    template <typename _XP>  // clang-format off
-    requires std::same_as<typename _XP::Scalar, real_t>
-    VectorXr operator()(const Eigen::MatrixBase<_XP>& xp) const {  // clang-format on
+    template <typename _XP,
+              std::enable_if_t<std::is_same_v<typename _XP::Scalar, real_t>, bool> = true>
+    VectorXr operator()(const Eigen::MatrixBase<_XP>& xp) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
 
         VectorXr y{_dependentVariableSize};
@@ -293,7 +308,9 @@ class Function {  // clang-format on
         const VectorXr p{xp.tail(_parameterSize)};
         fd::finite_jacobian(
             xp.head(_independentVariableSize),
-            [&](const VectorXr& xFD) { return (*this)(Utils::Compose(xFD, p).ToDynamic()); },
+            [&](const VectorXr& xFD) {
+                return (*this)((VectorXr{xFD.size() + p.size()} << xFD, p).finished());
+            },
             fdJacobian,
             accuracyOrder,
             epsilon);
@@ -314,7 +331,8 @@ class Function {  // clang-format on
         fd::finite_hessian(
             xp.head(_independentVariableSize),
             [&](const VectorXr& xFD) {
-                return (*this)(Utils::Compose(xFD, p).ToDynamic())[dependentVariableIndex];
+                return (*this)(
+                    (VectorXr{xFD.size() + p.size()} << xFD, p).finished())[dependentVariableIndex];
             },
             fdHessian,
             accuracyOrder,
@@ -540,9 +558,10 @@ class FunctionFactory {
             for (const auto row : enumerate(_blueprint.dependentVariableSize)) {
                 for (const auto col :
                      enumerate(_blueprint.independentVariableSize) |
-                         std::views::filter([&fullJacobianSparsity, row](const auto col) {
-                             return fullJacobianSparsity[static_cast<size_t>(row)].contains(
-                                 static_cast<size_t>(col));
+                         nano::views::filter([&fullJacobianSparsity, row](const auto col) {
+                             return fullJacobianSparsity[static_cast<size_t>(row)].find(
+                                        static_cast<size_t>(col)) !=
+                                    fullJacobianSparsity[static_cast<size_t>(row)].end();
                          })) {
                     jacobianSparsity[static_cast<size_t>(row)].insert(static_cast<size_t>(col));
                 }
@@ -563,10 +582,11 @@ class FunctionFactory {
                 static_cast<size_t>(_blueprint.independentVariableSize + _blueprint.parameterSize)};
             for (const auto row : enumerate(_blueprint.independentVariableSize)) {
                 for (const auto col :
-                     std::views::iota(row, _blueprint.independentVariableSize) |
-                         std::views::filter([&fullHessianSparsity, row](const auto col) {
-                             return fullHessianSparsity[static_cast<size_t>(row)].contains(
-                                 static_cast<size_t>(col));
+                     nano::views::iota(row, _blueprint.independentVariableSize) |
+                         nano::views::filter([&fullHessianSparsity, row](const auto col) {
+                             return fullHessianSparsity[static_cast<size_t>(row)].find(
+                                        static_cast<size_t>(col)) !=
+                                    fullHessianSparsity[static_cast<size_t>(row)].end();
                          })) {
                     hessianSparsity[static_cast<size_t>(row)].insert(static_cast<size_t>(col));
                 }

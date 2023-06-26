@@ -27,6 +27,7 @@
 #ifndef _UNGAR__IO__LOGGING_HPP_
 #define _UNGAR__IO__LOGGING_HPP_
 
+#include <type_traits>
 #ifdef UNGAR_CONFIG_ENABLE_LOGGING
 
 #ifndef UNGAR_CONFIG_ENABLE_RELEASE_MODE
@@ -48,11 +49,11 @@ class Logger {
     static constexpr const char* NAME = "ungar";
 
   private:
-    Logger()                         = delete;
-    Logger(const Logger&)            = delete;
-    Logger(Logger&&)                 = delete;
+    Logger()              = delete;
+    Logger(const Logger&) = delete;
+    Logger(Logger&&)      = delete;
     Logger& operator=(const Logger&) = delete;
-    Logger& operator=(Logger&&)      = delete;
+    Logger& operator=(Logger&&) = delete;
 
     static auto InitializeLogger() {
         static bool initialized = false;
@@ -90,9 +91,8 @@ class Logger {
 
 namespace fmt {
 
-template <typename _HanaStruct>  // clang-format off
-requires boost::hana::Struct<_HanaStruct>::value
-struct  formatter<_HanaStruct> {  // clang-format on
+template <typename _HanaStruct, typename _Char>
+struct formatter<_HanaStruct, _Char, std::enable_if_t<boost::hana::Struct<_HanaStruct>::value>> {
     char presentation = 'v';
 
     constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {

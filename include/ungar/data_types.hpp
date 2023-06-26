@@ -27,7 +27,10 @@
 #ifndef _UNGAR__DATA_TYPES_HPP_
 #define _UNGAR__DATA_TYPES_HPP_
 
-#include <ranges>
+#include <type_traits>
+#include "nanorange/detail/ranges/concepts.hpp"
+#include "nanorange/ranges.hpp"
+#include "nanorange/views.hpp"
 
 #include "Eigen/Geometry"
 #include "Eigen/Sparse"
@@ -133,83 +136,70 @@ struct is_hana_integral_constant_tag<hana::integral_constant_tag<_T>> : std::tru
 template <class _T>
 constexpr bool is_hana_integral_constant_tag_v = is_hana_integral_constant_tag<_T>::value;
 
-namespace Concepts {
+template <class _T>
+struct is_hana_integral_constant : is_hana_integral_constant_tag<hana::tag_of_t<_T>> {};
+template <class _T>
+constexpr bool is_hana_integral_constant_v = is_hana_integral_constant<_T>::value;
 
-template <typename _T, typename... _U>
-concept AnyOf = (std::same_as<_T, _U> || ...);
+template <class _T>
+struct is_hana_tuple : std::is_same<hana::tag_of_t<_T>, hana::tuple_tag> {};
+template <class _T>
+constexpr bool is_hana_tuple_v = is_hana_tuple<_T>::value;
 
-template <typename _T, typename... _U>
-concept Same = (std::same_as<_T, _U> && ...);
+template <class _T>
+struct is_hana_set : std::is_same<hana::tag_of_t<_T>, hana::set_tag> {};
+template <class _T>
+constexpr bool is_hana_set_v = is_hana_set<_T>::value;
 
-template <typename _STDArray>
-concept STDArray = is_std_array_v<_STDArray>;
+template <class _T>
+struct remove_cvref {
+    typedef std::remove_cv_t<std::remove_reference_t<_T>> type;
+};
+template <class _T>
+using remove_cvref_t = typename remove_cvref<_T>::type;
 
-template <typename _STDOptional>
-concept STDOptional = is_std_optional_v<_STDOptional>;
-
-template <typename _HanaIntegralConstant>
-concept HanaIntegralConstant =
-    is_hana_integral_constant_tag_v<hana::tag_of_t<_HanaIntegralConstant>>;
-
-template <typename _HanaPair>
-concept HanaPair = std::same_as<hana::tag_of_t<_HanaPair>, hana::pair_tag>;
-
-template <typename _HanaTuple>
-concept HanaTuple = std::same_as<hana::tag_of_t<_HanaTuple>, hana::tuple_tag>;
-
-template <typename _HanaSet>
-concept HanaSet = std::same_as<hana::tag_of_t<_HanaSet>, hana::set_tag>;
-
-template <typename _HanaMap>
-concept HanaMap = std::same_as<hana::tag_of_t<_HanaMap>, hana::map_tag>;
-
-template <typename _HanaBool>
-concept HanaBool = std::same_as<hana::tag_of_t<_HanaBool>, hana::integral_constant_tag<bool>>;
-
-template <typename _HanaString>
-concept HanaString = std::same_as<hana::tag_of_t<_HanaString>, hana::string_tag>;
-
-template <typename _HanaStruct>
-concept HanaStruct = hana::Struct<_HanaStruct>::value;
-
-template <typename _HanaOptional>
-concept HanaOptional = std::same_as<hana::tag_of_t<_HanaOptional>, hana::optional_tag>;
-
-// clang-format off
-template <typename _ForwardRangeOf, typename _T>
-concept ForwardRangeOf = std::ranges::forward_range<_ForwardRangeOf> &&
-                         std::same_as<std::ranges::range_value_t<_ForwardRangeOf>, _T>;
-
-template <typename _RandomAccessRangeOf, typename _T>
-concept RandomAccessRangeOf = std::ranges::random_access_range<_RandomAccessRangeOf> &&
-                              std::same_as<std::ranges::range_value_t<_RandomAccessRangeOf>, _T>;
+template <typename _T1, typename _T2, typename... _Args>
+struct same
+    : std::integral_constant<bool,
+                             std::is_same_v<_T1, _T2> && (std::is_same_v<_T1, _Args> && ...)> {};
+template <typename _T1, typename _T2, typename... _Args>
+constexpr bool same_v = same<_T1, _T2, _Args...>::value;
 
 template <typename _ContiguousRangeOf, typename _T>
-concept ContiguousRangeOf =
-    std::ranges::contiguous_range<_ContiguousRangeOf> &&
-    std::same_as<std::ranges::range_value_t<_ContiguousRangeOf>, _T>;
-// clang-format on
+struct contiguous_range_of
+    : std::conjunction<std::bool_constant<nano::ranges::contiguous_range<_ContiguousRangeOf>>,
+                       std::is_same<nano::ranges::range_value_t<_ContiguousRangeOf>, _T>> {};
+template <typename _ContiguousRangeOf, typename _T>
+constexpr bool contiguous_range_of_v = contiguous_range_of<_ContiguousRangeOf, _T>::value;
 
-template <typename _T, typename _U>
-concept Constructs = std::constructible_from<_U, _T>;
+template <typename... _BoolConstants>
+struct conjunction : std::bool_constant<(_BoolConstants::value && ...)> {};
 
 template <typename _Matrix>
-concept DenseMatrixExpression = std::derived_from<std::remove_cvref_t<_Matrix>,
-                                                  Eigen::MatrixBase<std::remove_cvref_t<_Matrix>>>;
+struct is_dense_matrix_expression
+    : std::is_base_of<Eigen::MatrixBase<remove_cvref_t<_Matrix>>, remove_cvref_t<_Matrix>> {};
+template <typename _Matrix>
+constexpr bool is_dense_matrix_expression_v = is_dense_matrix_expression<_Matrix>::value;
 
 template <typename _Vector>
-concept DenseVectorExpression = DenseMatrixExpression<_Vector> &&
-                                (std::remove_cvref_t<_Vector>::ColsAtCompileTime == 1);
+struct is_dense_vector_expression
+    : std::conjunction<is_dense_matrix_expression<_Vector>,
+                       std::bool_constant<remove_cvref_t<_Vector>::ColsAtCompileTime == 1>> {};
+template <typename _Vector>
+constexpr bool is_dense_vector_expression_v = is_dense_vector_expression<_Vector>::value;
 
 template <typename _Matrix>
-concept SparseMatrixExpression =
-    std::derived_from<std::remove_cvref_t<_Matrix>,
-                      Eigen::SparseMatrixBase<std::remove_cvref_t<_Matrix>>>;
+struct is_sparse_matrix_expression
+    : std::is_base_of<Eigen::SparseMatrixBase<remove_cvref_t<_Matrix>>, remove_cvref_t<_Matrix>> {};
+template <typename _Matrix>
+constexpr bool is_sparse_matrix_expression_v = is_sparse_matrix_expression<_Matrix>::value;
 
-template <typename _T, template <typename...> typename _TemplateType>
-concept SpecializationOf = is_specialization_of_v<_T, _TemplateType>;
-
-}  // namespace Concepts
+template <class _T>
+struct type_identity {
+    using type = _T;
+};
+template <class _T>
+using type_identity_t = typename type_identity<_T>::type;
 
 #define _UNGAR_MAKE_EIGEN_TYPEDEFS_IMPL(Type, TypeSuffix, SIZE, SizeSuffix)                     \
     using Matrix##SizeSuffix##TypeSuffix    = Eigen::Matrix<Type, SIZE, SIZE>;                  \
@@ -380,18 +370,12 @@ using idx_ = hana::integral_constant<index_t, VALUE>;
 template <index_t VALUE>
 inline constexpr idx_<VALUE> idx_c{};
 
-template <std::integral _Integral>
-constexpr auto enumerate(const _Integral n) {
-    return std::views::iota(static_cast<_Integral>(0), n);
-}
-
-template <Concepts::HanaIntegralConstant _IntegralConstant>
-constexpr auto enumerate(const _IntegralConstant n) {
-    return std::views::iota(0_idx, static_cast<index_t>(n.value));
+constexpr auto enumerate(const index_t n) {
+    return nano::views::iota(0_idx, n);
 }
 
 template <typename _T>
-constexpr auto cast_to = std::views::transform([](auto&& el) -> decltype(auto) {
+constexpr auto cast_to = nano::views::transform([](auto&& el) -> decltype(auto) {
     return static_cast<_T>(std::forward<decltype(el)>(el));
 });
 
@@ -408,64 +392,86 @@ constexpr bool is_const_ref_v = is_const_ref<_T>::value;
 
 namespace Internal {
 
-template <typename _EigenWrapper>
-struct EigenWrapperTraits;
-
-template <template <typename, int, typename> typename _EigenWrapper,
-          typename _EigenWrappedType,
-          int _OPTIONS,
-          typename _StrideType>
-struct EigenWrapperTraits<_EigenWrapper<_EigenWrappedType, _OPTIONS, _StrideType>> {
-    using WrappedType = _EigenWrappedType;
-};
-
-template <template <typename, int> typename _EigenWrapper, typename _EigenWrappedType, int SIZE>
-struct EigenWrapperTraits<_EigenWrapper<_EigenWrappedType, SIZE>> {
-    using WrappedType = _EigenWrappedType;
-};
-
-template <typename _EigenWrapper>
-using EigenWrappedType = typename EigenWrapperTraits<_EigenWrapper>::WrappedType;
+template <class T>
+constexpr T& ReferenceWrapperHelper(T& t) noexcept {
+    return t;
+}
+template <class T>
+void ReferenceWrapperHelper(T&&) = delete;
 
 }  // namespace Internal
 
-namespace Concepts {
+template <typename _T>
+class reference_wrapper {
+  public:
+    using type = _T;
 
-template <typename _EigenConstTypeWrapper>
-concept EigenConstTypeWrapper = std::is_const_v<Internal::EigenWrappedType<_EigenConstTypeWrapper>>;
-
-template <typename _EigenMutableTypeWrapper>
-concept EigenMutableTypeWrapper =
-    !std::is_const_v<Internal::EigenWrappedType<_EigenMutableTypeWrapper>>;
-
-}  // namespace Concepts
-
-template <size_t _N>
-struct fixed_string {
-    constexpr fixed_string(const char (&str)[_N]) {
-        std::copy_n(str, _N, data);
+    // Construct/copy/destroy.
+    template <
+        class U,
+        class = decltype(Internal::ReferenceWrapperHelper<_T>(std::declval<U>()),
+                         std::enable_if_t<!std::is_same_v<reference_wrapper, remove_cvref_t<U>>>())>
+    constexpr reference_wrapper(U&& u) noexcept(
+        noexcept(Internal::ReferenceWrapperHelper<_T>(std::forward<U>(u))))
+        : _ptr(std::addressof(Internal::ReferenceWrapperHelper<_T>(std::forward<U>(u)))) {
     }
 
-    constexpr char& operator[](const size_t i) {
-        return data[i];
+    reference_wrapper(const reference_wrapper&) noexcept = default;
+
+    // Assignment.
+    reference_wrapper& operator=(const reference_wrapper& x) noexcept = default;
+
+    // Access.
+    constexpr operator _T&() const noexcept {
+        return *_ptr;
+    }
+    constexpr _T& get() const noexcept {
+        return *_ptr;
     }
 
-    constexpr const char& operator[](const size_t i) const {
-        return data[i];
+    template <class... ArgTypes>
+    constexpr std::invoke_result_t<_T&, ArgTypes...> operator()(ArgTypes&&... args) const
+        noexcept(std::is_nothrow_invocable_v<_T&, ArgTypes...>) {
+        return std::invoke(get(), std::forward<ArgTypes>(args)...);
     }
 
-    constexpr size_t size() const {
-        return _N;
-    }
-
-    char data[_N];
+  private:
+    _T* _ptr;
 };
 
-template <fixed_string _STR>
-inline constexpr auto string_c = []<size_t... _IS>(std::index_sequence<_IS...>) {
-    return boost::hana::string_c<_STR[_IS]...>;
+// Deduction guides.
+template <typename _T>
+reference_wrapper(_T&) -> reference_wrapper<_T>;
+
+/// Take reference to a variable.
+template <typename _T>
+constexpr inline reference_wrapper<_T> ref(_T& t) noexcept {
+    return reference_wrapper<_T>(t);
 }
-(std::make_index_sequence<_STR.size() - 1UL>());
+
+/// Take const reference to a variable.
+template <typename _T>
+constexpr inline reference_wrapper<const _T> cref(const _T& t) noexcept {
+    return reference_wrapper<const _T>(t);
+}
+
+template <typename _T>
+void ref(const _T&&) = delete;
+
+template <typename _T>
+void cref(const _T&&) = delete;
+
+/// Overload to prevent wrapping a reference_wrapper
+template <typename _T>
+constexpr inline reference_wrapper<_T> ref(reference_wrapper<_T> t) noexcept {
+    return t;
+}
+
+/// Overload to prevent wrapping a reference_wrapper
+template <typename _T>
+constexpr inline reference_wrapper<const _T> cref(reference_wrapper<_T> t) noexcept {
+    return {t.get()};
+}
 
 }  // namespace Ungar
 

@@ -27,66 +27,14 @@
 #ifndef _UNGAR__OPTIMIZATION__CONCEPTS_HPP_
 #define _UNGAR__OPTIMIZATION__CONCEPTS_HPP_
 
+#include <type_traits>
 #include <unsupported/Eigen/SparseExtra>
 
+#include "boost/hana/fwd/type.hpp"
 #include "ungar/autodiff/function.hpp"
+#include "ungar/data_types.hpp"
 
 namespace Ungar {
-namespace Concepts {
-
-// clang-format off
-template <typename _EvaluableFunction, typename _XP, typename _Y>
-concept EvaluableFunction =
-    Ungar::Concepts::DenseVectorExpression<_XP> &&
-    requires (const _EvaluableFunction function,
-              Eigen::MatrixBase<_XP> xp,
-              Eigen::MatrixBase<_Y> y) {
-    { function.IndependentVariableSize() } -> std::same_as<index_t>;
-    { function.ParameterSize() } -> std::same_as<index_t>;
-    { function.DependentVariableSize() } -> std::same_as<index_t>;
-
-    requires std::same_as<typename _XP::Scalar, typename _Y::Scalar>;
-    { function.Evaluate(xp, y) }
-        -> std::same_as<void>;
-};
-
-template <typename _DifferentiableFunction, typename _XP>
-concept DifferentiableFunction =
-    Ungar::Concepts::DenseVectorExpression<_XP> &&
-    requires (const _DifferentiableFunction function,
-              Eigen::MatrixBase<_XP> xp) {
-    { function.IndependentVariableSize() } -> std::same_as<index_t>;
-    { function.ParameterSize() } -> std::same_as<index_t>;
-    { function.DependentVariableSize() } -> std::same_as<index_t>;
-
-    { function(xp) }
-        -> Ungar::Concepts::DenseVectorExpression;
-    { function.Jacobian(xp) }
-        -> Ungar::Concepts::SparseMatrixExpression;
-};
-
-template <typename _TwiceDifferentiableFunction, typename _XP>
-concept TwiceDifferentiableFunction =
-    DifferentiableFunction<_TwiceDifferentiableFunction, _XP> &&
-    requires (const _TwiceDifferentiableFunction function,
-              index_t dependentVariableIndex,
-              Eigen::MatrixBase<_XP> xp) {
-    { function.Hessian(dependentVariableIndex, xp) }
-        -> Ungar::Concepts::SparseMatrixExpression;
-};
-// clang-format on
-
-}  // namespace Concepts
-
-static_assert(Concepts::EvaluableFunction<Autodiff::Function, VectorXr, VectorXr>,
-              "The EvaluableFunction concept must be satisfied by the Autodiff::Function class.");
-static_assert(
-    Concepts::DifferentiableFunction<Autodiff::Function, VectorXr>,
-    "The DifferentiableFunction concept must be satisfied by the Autodiff::Function class.");
-static_assert(
-    Concepts::TwiceDifferentiableFunction<Autodiff::Function, VectorXr>,
-    "The TwiceDifferentiableFunction concept must be satisfied by the Autodiff::Function class.");
-
 class IdleTwiceDifferentiableFunction {
   public:
     constexpr IdleTwiceDifferentiableFunction(const index_t independentVariableSize,
@@ -104,10 +52,12 @@ class IdleTwiceDifferentiableFunction {
         return VectorX<ScalarType>{};
     }
 
-    template <typename _XP, typename _Y>
-    requires std::same_as<typename _XP::Scalar, typename _Y::Scalar> void Evaluate(
-        [[maybe_unused]] const Eigen::MatrixBase<_XP>& xp,
-        [[maybe_unused]] Eigen::MatrixBase<_Y> const& y) const {
+    template <
+        typename _XP,
+        typename _Y,
+        std::enable_if_t<std::is_same_v<typename _XP::Scalar, typename _Y::Scalar>, bool> = true>
+    void Evaluate([[maybe_unused]] const Eigen::MatrixBase<_XP>& xp,
+                  [[maybe_unused]] Eigen::MatrixBase<_Y> const& y) const {
         UNGAR_ASSERT(xp.size() == _independentVariableSize + _parameterSize);
         UNGAR_ASSERT(y.size() == 0_idx);
     }
@@ -150,10 +100,10 @@ class IdleTwiceDifferentiableFunction {
     index_t _parameterSize;
 };
 
-template <Ungar::Concepts::DenseVectorExpression _XP                   = VectorXr,
-          Concepts::TwiceDifferentiableFunction<_XP> _Objective        = Autodiff::Function,
-          Concepts::DifferentiableFunction<_XP> _EqualityConstraints   = Autodiff::Function,
-          Concepts::DifferentiableFunction<_XP> _InequalityConstraints = Autodiff::Function>
+template <typename _XP                    = VectorXr,
+          typename _Objective             = Autodiff::Function,
+          typename _EqualityConstraints   = Autodiff::Function,
+          typename _InequalityConstraints = Autodiff::Function>
 struct NLPProblem {
     _Objective objective;
     _EqualityConstraints equalityConstraints;
@@ -162,35 +112,17 @@ struct NLPProblem {
 
 template <class _T>
 struct is_nlp_problem : std::false_type {};
-template <Ungar::Concepts::DenseVectorExpression _XP,
-          Concepts::TwiceDifferentiableFunction<_XP> _Objective,
-          Concepts::DifferentiableFunction<_XP> _EqualityConstraints,
-          Concepts::DifferentiableFunction<_XP> _InequalityConstraints>
+template <typename _XP,
+          typename _Objective,
+          typename _EqualityConstraints,
+          typename _InequalityConstraints>
 struct is_nlp_problem<NLPProblem<_XP, _Objective, _EqualityConstraints, _InequalityConstraints>>
     : std::true_type {};
 template <class _T>
 constexpr bool is_nlp_problem_v = is_nlp_problem<_T>::value;
 
-namespace Concepts {
-
-template <typename _NLPProblem>
-concept NLPProblem = is_nlp_problem_v<_NLPProblem>;
-
-// clang-format off
-template <typename _NLPOptimizer, typename _NLPProblem, typename _XP>
-concept NLPOptimizer = NLPProblem<_NLPProblem> && requires(_NLPOptimizer optimizer,
-                                                           _NLPProblem nlp,
-                                                           Eigen::MatrixBase<_XP> xp) {
-    { optimizer.Optimize(nlp, xp) } -> Ungar::Concepts::DenseMatrixExpression;
-};
-// clang-format on
-
-}  // namespace Concepts
-
-template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
-inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                           decltype(hana::nothing),
-                           decltype(hana::nothing)) {
+template <typename _Objective, typename _XP = VectorXr>
+inline auto MakeNLPProblem(_Objective obj, decltype(hana::nothing), decltype(hana::nothing)) {
     using Objective             = decltype(obj);
     using EqualityConstraints   = IdleTwiceDifferentiableFunction;
     using InequalityConstraints = IdleTwiceDifferentiableFunction;
@@ -199,18 +131,13 @@ inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
     const index_t independentVariableSize = obj.IndependentVariableSize();
     const index_t parameterSize           = obj.ParameterSize();
 
-    return NLPProblemType{
-        .objective = std::move(obj),
-        .equalityConstraints =
-            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
-        .inequalityConstraints =
-            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}};
+    return NLPProblemType{std::move(obj),
+                          IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
+                          IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}};
 }
 
-template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
-inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                           Concepts::DifferentiableFunction<_XP> auto eqs,
-                           decltype(hana::nothing)) {
+template <typename _Objective, typename _EqualityConstraints, typename _XP = VectorXr>
+inline auto MakeNLPProblem(_Objective obj, _EqualityConstraints eqs, decltype(hana::nothing)) {
     using Objective             = decltype(obj);
     using EqualityConstraints   = decltype(eqs);
     using InequalityConstraints = IdleTwiceDifferentiableFunction;
@@ -219,16 +146,13 @@ inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
     const index_t independentVariableSize = obj.IndependentVariableSize();
     const index_t parameterSize           = obj.ParameterSize();
 
-    return NLPProblemType{.objective             = std::move(obj),
-                          .equalityConstraints   = std::move(eqs),
-                          .inequalityConstraints = IdleTwiceDifferentiableFunction{
-                              independentVariableSize, parameterSize}};
+    return NLPProblemType{std::move(obj),
+                          std::move(eqs),
+                          IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize}};
 }
 
-template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
-inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                           decltype(hana::nothing),
-                           Concepts::DifferentiableFunction<_XP> auto ineqs) {
+template <typename _Objective, typename _InequalityConstraints, typename _XP = VectorXr>
+inline auto MakeNLPProblem(_Objective obj, decltype(hana::nothing), _InequalityConstraints ineqs) {
     using Objective             = decltype(obj);
     using EqualityConstraints   = IdleTwiceDifferentiableFunction;
     using InequalityConstraints = decltype(ineqs);
@@ -237,17 +161,16 @@ inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
     const index_t independentVariableSize = obj.IndependentVariableSize();
     const index_t parameterSize           = obj.ParameterSize();
 
-    return NLPProblemType{
-        .objective = std::move(obj),
-        .equalityConstraints =
-            IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
-        .inequalityConstraints = std::move(ineqs)};
+    return NLPProblemType{std::move(obj),
+                          IdleTwiceDifferentiableFunction{independentVariableSize, parameterSize},
+                          std::move(ineqs)};
 }
 
-template <Ungar::Concepts::DenseVectorExpression _XP = VectorXr>
-inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
-                           Concepts::DifferentiableFunction<_XP> auto eqs,
-                           Concepts::DifferentiableFunction<_XP> auto ineqs) {
+template <typename _Objective,
+          typename _EqualityConstraints,
+          typename _InequalityConstraints,
+          typename _XP = VectorXr>
+inline auto MakeNLPProblem(_Objective obj, _EqualityConstraints eqs, _InequalityConstraints ineqs) {
     using Objective             = decltype(obj);
     using EqualityConstraints   = decltype(eqs);
     using InequalityConstraints = decltype(ineqs);
@@ -256,14 +179,12 @@ inline auto MakeNLPProblem(Concepts::TwiceDifferentiableFunction<_XP> auto obj,
     const index_t independentVariableSize = obj.IndependentVariableSize();
     const index_t parameterSize           = obj.ParameterSize();
 
-    return NLPProblemType{.objective             = std::move(obj),
-                          .equalityConstraints   = std::move(eqs),
-                          .inequalityConstraints = std::move(ineqs)};
+    return NLPProblemType{std::move(obj), std::move(eqs), std::move(ineqs)};
 }
 
 struct FunctionInterface {
-    template <typename _XP, typename _Y>
-    static void Evaluate(const Concepts::EvaluableFunction<_XP, _Y> auto& function,
+    template <typename _EvaluableFunction, typename _XP, typename _Y>
+    static void Evaluate(const _EvaluableFunction& function,
                          const Eigen::MatrixBase<_XP>& xp,
                          Eigen::MatrixBase<_Y> const& y) {
         UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
@@ -272,36 +193,32 @@ struct FunctionInterface {
         function.Evaluate(xp, y.const_cast_derived());
     }
 
-    template <typename _XP>
-    static auto Invoke(
-        const Concepts::EvaluableFunction<_XP, VectorX<typename _XP::Scalar>> auto& function,
-        const Eigen::MatrixBase<_XP>&
-            xp) requires(!Concepts::DifferentiableFunction<decltype(function), _XP>) {
-        UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
-
-        using ScalarType = typename _XP::Scalar;
-        VectorX<ScalarType> y{function.DependentVariableSize()};
-        function.Evaluate(xp, y);
-        return y;
-    }
-
-    template <typename _XP>
-    static decltype(auto) Invoke(const Concepts::DifferentiableFunction<_XP> auto& function,
+    template <typename _EvaluableFunction, typename _XP>
+    static decltype(auto) Invoke(const _EvaluableFunction& function,
                                  const Eigen::MatrixBase<_XP>& xp) {
         UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
 
-        return function(xp);
+        const auto EVALUATE = !hana::is_valid(
+            [](const auto& f, const auto& v) -> decltype((void)function(v)) {}, function, xp);
+        if constexpr (decltype(EVALUATE)::value) {
+            using ScalarType = typename _XP::Scalar;
+            VectorX<ScalarType> y{function.DependentVariableSize()};
+            function.Evaluate(xp, y);
+            return y;
+        } else {
+            return function(xp);
+        }
     }
 
-    template <typename _XP>
-    static decltype(auto) Jacobian(const Concepts::DifferentiableFunction<_XP> auto& function,
+    template <typename _DifferentiableFunction, typename _XP>
+    static decltype(auto) Jacobian(const _DifferentiableFunction& function,
                                    const Eigen::MatrixBase<_XP>& xp) {
         UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
         return function.Jacobian(xp);
     }
 
-    template <typename _XP>
-    static decltype(auto) Hessian(const Concepts::TwiceDifferentiableFunction<_XP> auto& function,
+    template <typename _DifferentiableFunction, typename _XP>
+    static decltype(auto) Hessian(const _DifferentiableFunction& function,
                                   const index_t dependentVariableIndex,
                                   const Eigen::MatrixBase<_XP>& xp) {
         UNGAR_ASSERT(xp.size() == function.IndependentVariableSize() + function.ParameterSize());
@@ -311,7 +228,10 @@ struct FunctionInterface {
     }
 };
 
-template <Concepts::NLPProblem _NLPProblem, typename _XP, int _P = 2>
+template <typename _NLPProblem,
+          typename _XP,
+          int _P                                                = 2,
+          std::enable_if_t<is_nlp_problem_v<_NLPProblem>, bool> = true>
 typename _XP::Scalar EvaluateConstraintViolation(const _NLPProblem& nlpProblem,
                                                  const Eigen::MatrixBase<_XP>& xp) {
     UNGAR_ASSERT(xp.size() == nlpProblem.objective.IndependentVariableSize() +
@@ -322,7 +242,7 @@ typename _XP::Scalar EvaluateConstraintViolation(const _NLPProblem& nlpProblem,
     VectorX<ScalarType> ineqs = FunctionInterface::Invoke(nlpProblem.inequalityConstraints, xp);
     ineqs                     = (ineqs.array() < ScalarType{0.0}).select(ScalarType{0.0}, ineqs);
 
-    return Utils::Compose(eqs, ineqs).ToDynamic().template lpNorm<_P>();
+    return (VectorXr{eqs.size() + ineqs.size()} << eqs, ineqs).finished().template lpNorm<_P>();
 }
 
 }  // namespace Ungar

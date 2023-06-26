@@ -58,7 +58,21 @@ if(UNGAR_ENABLE_AUTODIFF)
 endif()
 
 if(UNGAR_ENABLE_OPTIMIZATION)
-  # Download osqp to prevent osqpcpp from doing it unsafely.
+  # Download abseil and osqp to prevent osqpcpp from doing it unsafely.
+  if(NOT TARGET absl::strings
+     OR NOT TARGET absl::status
+     OR NOT TARGET absl::span)
+    message(STATUS "Fetching abseil...")
+    FetchContent_Declare(
+      abseil
+      URL https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.zip
+      URL_HASH
+        SHA256=51d676b6846440210da48899e4df618a357e6e44ecde7106f1e44ea16ae8adc7)
+    set(ABSL_PROPAGATE_CXX_STD ON)
+    set(ABSL_USE_SYSTEM_INCLUDES ON)
+    FetchContent_MakeAvailable(abseil)
+  endif()
+
   if(NOT TARGET osqpstatic)
     message(STATUS "Fetching osqp...")
     FetchContent_Declare(
