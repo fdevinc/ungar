@@ -49,15 +49,7 @@ add_subdirectory(external)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Clang.
   target_compile_options(ungar INTERFACE "-pedantic" "$<$<CONFIG:RELEASE>:-O2>")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # GNU Compiler Collection (GCC).
-  target_compile_options(
-    ungar
-    INTERFACE "-pedantic"
-              "-ftemplate-backtrace-limit=1"
-              "-fconstexpr-depth=2147483647"
-              "-fconstexpr-loop-limit=2147483647"
-              "-fconstexpr-cache-depth=2147483647"
-              "-fconstexpr-ops-limit=2147483647"
-              "$<$<CONFIG:RELEASE>:-O3>")
+  target_compile_options(ungar INTERFACE "-pedantic" "$<$<CONFIG:RELEASE>:-O3>")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel") # Intel C++ Compiler.
   message(WARNING "Intel C++ Compiler is not supported.")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") # MSVC.

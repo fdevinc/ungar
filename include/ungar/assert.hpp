@@ -29,7 +29,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <source_location>
 
 #ifdef UNGAR_CONFIG_ENABLE_LOGGING
 #include "ungar/io/logging.hpp"

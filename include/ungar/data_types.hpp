@@ -277,7 +277,7 @@ UNGAR_MAKE_EIGEN_TYPEDEFS(Eigen::Dynamic, X);
     template <typename _Scalar>                                           \
     using Matrix##SIZE##X = Eigen::Matrix<_Scalar, SIZE, Eigen::Dynamic>; \
     template <typename _Scalar>                                           \
-    using Matrix##X##SIZE = Eigen::Matrix<_Scalar, Eigen::Dynamic, SIZE>;
+    using Matrix##X##SIZE = Eigen::Matrix<_Scalar, Eigen::Dynamic, SIZE>
 
 UNGAR_MAKE_EIGEN_TYPEDEFS(2);
 UNGAR_MAKE_EIGEN_TYPEDEFS(3);
