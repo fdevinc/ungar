@@ -47,13 +47,11 @@ add_subdirectory(external)
 # Add compile options.
 # ##############################################################################
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Clang.
-  target_compile_options(ungar INTERFACE "-pedantic" "-pedantic-errors"
-                                         "$<$<CONFIG:RELEASE>:-O2>")
+  target_compile_options(ungar INTERFACE "-pedantic" "$<$<CONFIG:RELEASE>:-O2>")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # GNU Compiler Collection (GCC).
   target_compile_options(
     ungar
     INTERFACE "-pedantic"
-              "-pedantic-errors"
               "-ftemplate-backtrace-limit=1"
               "-fconstexpr-depth=2147483647"
               "-fconstexpr-loop-limit=2147483647"
@@ -73,7 +71,7 @@ endif()
 # ##############################################################################
 # Core modules.
 list(APPEND UNGAR_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include")
-list(APPEND UNGAR_LINK_LIBRARIES nanorange Eigen3::Eigen Boost::hana)
+list(APPEND UNGAR_LINK_LIBRARIES gcem nanorange Eigen3::Eigen Boost::hana)
 
 # Optional modules.
 if(UNGAR_ENABLE_LOGGING)

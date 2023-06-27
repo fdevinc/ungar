@@ -27,8 +27,6 @@
 #ifndef _UNGAR__DATA_TYPES_HPP_
 #define _UNGAR__DATA_TYPES_HPP_
 
-#include <type_traits>
-#include "nanorange/detail/ranges/concepts.hpp"
 #include "nanorange/ranges.hpp"
 #include "nanorange/views.hpp"
 

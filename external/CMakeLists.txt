@@ -13,6 +13,7 @@ if(UNGAR_BUILD_TESTS)
   include(GoogleTest)
 endif()
 
+add_subdirectory(gcem)
 add_subdirectory(nanorange)
 
 if(NOT TARGET Eigen3::Eigen)
@@ -70,7 +71,10 @@ if(UNGAR_ENABLE_OPTIMIZATION)
         SHA256=51d676b6846440210da48899e4df618a357e6e44ecde7106f1e44ea16ae8adc7)
     set(ABSL_PROPAGATE_CXX_STD ON)
     set(ABSL_USE_SYSTEM_INCLUDES ON)
+    # Compile abseil using C++17.
+    set(CMAKE_CXX_STANDARD 17)
     FetchContent_MakeAvailable(abseil)
+    unset(CMAKE_CXX_STANDARD)
   endif()
 
   if(NOT TARGET osqpstatic)

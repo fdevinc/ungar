@@ -27,6 +27,8 @@
 #ifndef _UNGAR__OPTIMIZATION__SOFT_INEQUALITY_CONSTRAINT_HPP_
 #define _UNGAR__OPTIMIZATION__SOFT_INEQUALITY_CONSTRAINT_HPP_
 
+#include "gcem.hpp"
+
 #include "ungar/data_types.hpp"
 
 namespace Ungar {
@@ -77,9 +79,9 @@ class SoftInequalityConstraint {
           _epsilon{epsilon},
           _a1{stiffness},
           _b1{-0.5 * _a1 * _epsilon},
-          _c1{-1.0 / 3.0 * (-_b1 - _a1 * _epsilon) * _epsilon - 0.5 * _a1 * pow(_epsilon, 2) -
+          _c1{-1.0 / 3.0 * (-_b1 - _a1 * _epsilon) * _epsilon - 0.5 * _a1 * gcem::pow(_epsilon, 2) -
               _b1 * _epsilon},
-          _a2{(-_b1 - _a1 * _epsilon) / pow(_epsilon, 2)},
+          _a2{(-_b1 - _a1 * _epsilon) / gcem::pow(_epsilon, 2)},
           _b2{_a1},
           _c2{_b1},
           _d2{_c1} {

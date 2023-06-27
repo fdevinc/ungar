@@ -261,7 +261,7 @@ class Variable {
 
     template <typename _N, typename... _Args>
     constexpr decltype(auto) GetImpl0(_N name, _Args... args) const {
-        if constexpr (sizeof...(args)) {
+        if constexpr (static_cast<bool>(sizeof...(args))) {
             return BypassImpl(name).value().get()(args...);
         } else {
             return BypassImpl(name).value().get();
@@ -270,7 +270,7 @@ class Variable {
 
     template <typename _N, typename... _Args>
     constexpr decltype(auto) GetImpl1(_N name, const index_t i, _Args... args) const {
-        if constexpr (sizeof...(args)) {
+        if constexpr (static_cast<bool>(sizeof...(args))) {
             return BypassImpl(name, i).value().get()(args...);
         } else {
             return BypassImpl(name, i).value().get();
@@ -282,7 +282,7 @@ class Variable {
                                       const index_t i1,
                                       const index_t i2,
                                       _Args... args) const {
-        if constexpr (sizeof...(args)) {
+        if constexpr (static_cast<bool>(sizeof...(args))) {
             return BypassImpl(name, i1, i2).value().get()(args...);
         } else {
             return BypassImpl(name, i1, i2).value().get();
@@ -292,7 +292,7 @@ class Variable {
     template <typename _N, typename... _Args>
     constexpr decltype(auto) GetImpl3(
         _N name, const index_t i1, const index_t i2, const index_t i3, _Args... args) const {
-        if constexpr (sizeof...(args)) {
+        if constexpr (static_cast<bool>(sizeof...(args))) {
             return BypassImpl(name, i1, i2, i3).value().get()(args...);
         } else {
             return BypassImpl(name, i1, i2, i3).value().get();
