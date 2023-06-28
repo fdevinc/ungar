@@ -27,11 +27,27 @@
 #ifndef _UNGAR__VARIABLE_LAZY_MAP_HPP_
 #define _UNGAR__VARIABLE_LAZY_MAP_HPP_
 
-#include <type_traits>
-#include "ungar/data_types.hpp"
 #include "ungar/variable.hpp"
 
 namespace Ungar {
+namespace Internal {
+
+static auto hasData =
+    hana::is_valid([](auto&& range) -> decltype((void)nano::ranges::data(range)) {});
+
+template <typename _Range>
+auto Data(_Range&& range) {
+    if constexpr (is_dense_vector_expression_v<remove_cvref_t<_Range>>) {
+        return std::forward<_Range>(range).data();
+    } else if constexpr (decltype(hasData(range)){}) {
+        return nano::ranges::data(std::forward<_Range>(range));
+    } else {
+        static_assert(dependent_false<_Range>,
+                      "The provided range does not provide an accessor to the underlying data.");
+    }
+}
+
+}  // namespace Internal
 
 template <typename _Scalar, typename _Variable, bool _ENABLE_MUTABLE_MEMBERS>
 class VariableLazyMap {
@@ -67,7 +83,7 @@ class VariableLazyMap {
         typename _V,
         std::enable_if_t<UnderlyingSize(hana::type_c<_Underlying>) == _V::Size(), bool> = true>
     constexpr VariableLazyMap(const _Underlying& underlying, const _V& var)
-        : _data{nano::ranges::data(underlying)}, _variable{var} {
+        : _data{Internal::Data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
 
@@ -76,7 +92,7 @@ class VariableLazyMap {
         typename _V,
         std::enable_if_t<UnderlyingSize(hana::type_c<_Underlying>) == _V::Size(), bool> = true>
     constexpr VariableLazyMap(_Underlying& underlying, const _V& var)
-        : _data{nano::ranges::data(underlying)}, _variable{var} {
+        : _data{Internal::Data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
 
@@ -172,13 +188,13 @@ class VariableLazyMap {
 
 template <typename _Underlying, typename _Variable>
 VariableLazyMap(const _Underlying& underlying, const _Variable& var)
-    -> VariableLazyMap<remove_cvref_t<decltype(*nano::ranges::data(underlying))>,
+    -> VariableLazyMap<remove_cvref_t<decltype(*Internal::Data(underlying))>,
                        remove_cvref_t<decltype(var)>,
                        false>;
 
 template <typename _Underlying, typename _Variable>
 VariableLazyMap(_Underlying& underlying, const _Variable& var)
-    -> VariableLazyMap<std::remove_reference_t<decltype(*nano::ranges::data(underlying))>,
+    -> VariableLazyMap<std::remove_reference_t<decltype(*Internal::Data(underlying))>,
                        remove_cvref_t<decltype(var)>,
                        true>;
 
