@@ -28,11 +28,8 @@
 #define _UNGAR__AUTODIFF__FUNCTION_HPP_
 
 #include <finitediff.hpp>
-#include <type_traits>
 
-#include "ungar/autodiff/data_types.hpp"
 #include "ungar/autodiff/support/quaternion.hpp"
-#include "ungar/data_types.hpp"
 #include "ungar/io/logging.hpp"
 #include "ungar/utils/passkey.hpp"
 #include "ungar/utils/utils.hpp"

@@ -27,15 +27,6 @@
 #ifndef _UNGAR__VARIABLE_HPP_
 #define _UNGAR__VARIABLE_HPP_
 
-#include <type_traits>
-#include "boost/hana/detail/integral_constant.hpp"
-#include "boost/hana/fwd/integral_constant.hpp"
-#include "boost/hana/fwd/length.hpp"
-#include "boost/hana/fwd/take_while.hpp"
-#include "boost/hana/fwd/tuple.hpp"
-#include "boost/hana/fwd/type.hpp"
-#include "boost/hana/type.hpp"
-#include "ungar/data_types.hpp"
 #include "ungar/utils/utils.hpp"
 
 namespace Ungar {

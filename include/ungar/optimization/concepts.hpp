@@ -27,12 +27,7 @@
 #ifndef _UNGAR__OPTIMIZATION__CONCEPTS_HPP_
 #define _UNGAR__OPTIMIZATION__CONCEPTS_HPP_
 
-#include <type_traits>
-#include <unsupported/Eigen/SparseExtra>
-
-#include "boost/hana/fwd/type.hpp"
 #include "ungar/autodiff/function.hpp"
-#include "ungar/data_types.hpp"
 
 namespace Ungar {
 class IdleTwiceDifferentiableFunction {

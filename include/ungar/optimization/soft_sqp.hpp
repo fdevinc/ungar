@@ -27,13 +27,11 @@
 #ifndef _UNGAR__OPTIMIZATION__SOFT_SQP_HPP_
 #define _UNGAR__OPTIMIZATION__SOFT_SQP_HPP_
 
-#include <type_traits>
 #include <osqp++.h>
 
 #include "ungar/optimization/backtracking_line_search.hpp"
 #include "ungar/optimization/concepts.hpp"
 #include "ungar/optimization/soft_inequality_constraint.hpp"
-#include "ungar/utils/utils.hpp"
 
 namespace Ungar {
 

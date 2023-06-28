@@ -26,7 +26,6 @@
 
 #include <gtest/gtest.h>
 
-#include "ungar/variable.hpp"
 #include "ungar/variable_map.hpp"
 
 namespace Ungar {

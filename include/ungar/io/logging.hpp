@@ -27,7 +27,6 @@
 #ifndef _UNGAR__IO__LOGGING_HPP_
 #define _UNGAR__IO__LOGGING_HPP_
 
-#include <type_traits>
 #ifdef UNGAR_CONFIG_ENABLE_LOGGING
 
 #ifndef UNGAR_CONFIG_ENABLE_RELEASE_MODE

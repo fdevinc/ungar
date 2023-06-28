@@ -27,7 +27,6 @@
 #include <gtest/gtest.h>
 
 #include "ungar/autodiff/function.hpp"
-#include "ungar/data_types.hpp"
 
 namespace {
 

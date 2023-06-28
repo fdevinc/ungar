@@ -27,8 +27,6 @@
 #ifndef _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 #define _UNGAR__OPTIMIZATION__BACKTRACKING_LINE_SEARCH_HPP_
 
-#include <type_traits>
-#include "boost/hana/fwd/type.hpp"
 #include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
 

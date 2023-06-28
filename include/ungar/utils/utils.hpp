@@ -29,10 +29,8 @@
 
 #include <cmath>
 #include <filesystem>
-#include <locale>
 #include <random>
 
-#include "boost/hana/fwd/type.hpp"
 #include "ungar/assert.hpp"
 #include "ungar/data_types.hpp"
 

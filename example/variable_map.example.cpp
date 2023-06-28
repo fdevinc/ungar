@@ -24,7 +24,6 @@
  *
  ******************************************************************************/
 
-#include "ungar/variable.hpp"
 #include "ungar/variable_map.hpp"
 
 int main() {
