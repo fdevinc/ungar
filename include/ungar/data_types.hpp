@@ -179,10 +179,23 @@ struct is_dense_matrix_expression
 template <typename _Matrix>
 constexpr bool is_dense_matrix_expression_v = is_dense_matrix_expression<_Matrix>::value;
 
+namespace Internal {
+
+template <typename _Vector>
+constexpr auto IsDenseVectorExpression() {
+    if constexpr (is_dense_matrix_expression_v<_Vector>) {
+        return std::bool_constant<remove_cvref_t<_Vector>::ColsAtCompileTime == 1>{};
+    } else {
+        return std::bool_constant<false>{};
+    }
+}
+
+}  // namespace Internal
+
 template <typename _Vector>
 struct is_dense_vector_expression
     : std::conjunction<is_dense_matrix_expression<_Vector>,
-                       std::bool_constant<remove_cvref_t<_Vector>::ColsAtCompileTime == 1>> {};
+                       decltype(Internal::IsDenseVectorExpression<_Vector>())> {};
 template <typename _Vector>
 constexpr bool is_dense_vector_expression_v = is_dense_vector_expression<_Vector>::value;
 
