@@ -9,12 +9,12 @@ target_compile_features(ungar INTERFACE cxx_std_17)
 # ##############################################################################
 # Set up CMake options.
 # ##############################################################################
-option(UNGAR_BUILD_TESTS "Add targets for unit testing." ON)
-option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." ON)
-option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." ON)
-option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." ON)
+option(UNGAR_BUILD_TESTS "Add targets for unit testing." OFF)
+option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." OFF)
+option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." OFF)
+option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." OFF)
 option(UNGAR_ENABLE_OPTIMIZATION
-       "Enable Ungar's nonlinear programming interface." ON)
+       "Enable Ungar's nonlinear programming interface." OFF)
 
 if(UNGAR_ENABLE_AUTODIFF AND NOT UNGAR_ENABLE_LOGGING)
   message(

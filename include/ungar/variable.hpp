@@ -153,6 +153,28 @@ class Variable {
         }
     }
 
+    template <typename _N, typename... _Args>
+    constexpr decltype(auto) At(_N, _Args... args) const {
+        auto tuple            = hana::make_tuple(hana::type_c<_Args>...);
+        constexpr size_t SIZE = hana::length(hana::take_while(tuple, [](auto t) {
+            using Type              = typename decltype(t)::type;
+            constexpr bool INTEGRAL = std::is_integral_v<Type> || is_hana_integral_constant_v<Type>;
+            return hana::bool_c<INTEGRAL>;
+        }));
+        static_assert(SIZE == sizeof...(_Args),
+                      "All the arguments to the 'At' accessor must be indices.");
+
+        if constexpr (SIZE == 0UL) {
+            return GetImpl0(_N{}, args...);
+        } else if constexpr (SIZE == 1UL) {
+            return GetImpl1(_N{}, args...);
+        } else if constexpr (SIZE == 2UL) {
+            return GetImpl2(_N{}, args...);
+        } else if constexpr (SIZE == 3UL) {
+            return GetImpl3(_N{}, args...);
+        }
+    }
+
     template <typename _State, typename _F>
     auto Fold(_State&& state, _F&& f) const {
         return hana::fold(
