@@ -1,7 +1,6 @@
 # Ungar
 
 > Simplifying optimal control with metaprogramming
-![example workflow](https://github.com/MiguelZamoraM/ungar/actions/workflows/camke.yml/badge.svg) 
 ## Overview
 ```cpp
 #include "ungar/variable_map.hpp"
