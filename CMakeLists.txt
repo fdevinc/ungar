@@ -120,6 +120,7 @@ endif()
 # Add optional targets.
 # ##############################################################################
 if(UNGAR_BUILD_TESTS)
+  enable_testing()
   add_subdirectory(test)
 endif()
 
