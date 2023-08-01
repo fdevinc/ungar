@@ -32,6 +32,7 @@
 #include "ungar/optimization/backtracking_line_search.hpp"
 #include "ungar/optimization/concepts.hpp"
 #include "ungar/optimization/soft_inequality_constraint.hpp"
+#include "ungar/utils/defaulted.hpp"
 #include "ungar/utils/utils.hpp"
 
 namespace Ungar {
@@ -39,11 +40,11 @@ namespace Ungar {
 class SoftSQPOptimizer {
   public:
     SoftSQPOptimizer(const bool verbose,
-                     const real_t constraintViolationMultiplier = 1.0,
-                     const index_t maxIterations                = 10_idx,
-                     const real_t stiffness                     = 1.0,
-                     const real_t epsilon                       = 2e-5,
-                     const bool polish                          = true)
+                     const defaulted<1.0> constraintViolationMultiplier = {},
+                     const defaulted<10_idx> maxIterations              = {},
+                     const defaulted<100.0> stiffness                   = {},
+                     const defaulted<2e-5> epsilon                      = {},
+                     const defaulted<false> polish                      = {})
         : _constraintViolationMultiplier{constraintViolationMultiplier},
           _maxIterations{maxIterations},
           _stiffness{stiffness},
