@@ -437,7 +437,9 @@ class ComposeImpl {
         return composedVector;
     }
 
-    auto ToDynamic() requires ALL_FIXED_SIZES {
+    auto ToDynamic()
+        requires ALL_FIXED_SIZES
+    {
         VectorX<ScalarType> composedVector{COMPOSED_VECTOR_SIZE};
         In(composedVector);
         return composedVector;
@@ -695,8 +697,8 @@ inline Quaternion<typename _Vector::Scalar> ExponentialMap(const Eigen::MatrixBa
     if constexpr (std::convertible_to<ScalarType, real_t>) {
         const ScalarType vNorm = v.norm();
         q.vec()                = vNorm > 0.0 ? Vector3<ScalarType>{v * sin(0.5 * vNorm) / vNorm}
-                              : Vector3<ScalarType>{v * 0.5};
-        q.w() = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
+                                             : Vector3<ScalarType>{v * 0.5};
+        q.w()                  = vNorm > 0.0 ? cos(0.5 * vNorm) : 1.0;
     }
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
     else if constexpr (std::convertible_to<ScalarType, ad_scalar_t>) {
@@ -773,6 +775,21 @@ inline auto Pow(const _Base base, const _Exponent exponent) {
         } else {
             return CppAD::pow(base, exponent);
         }
+    }
+#endif
+    else {
+        Unreachable();
+    }
+}
+
+template <Concepts::Scalar _Scalar>
+inline auto Sqrt(const _Scalar a) {
+    if constexpr (std::convertible_to<_Scalar, real_t>) {
+        return std::sqrt(a);
+    }
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    else if constexpr (std::convertible_to<_Scalar, ad_scalar_t>) {
+        return CppAD::sqrt(a);
     }
 #endif
     else {
@@ -915,6 +932,74 @@ inline _Scalar SmoothMin(const _Scalar& a,
                          const std::type_identity_t<_Scalar>& b,
                          const std::type_identity_t<_Scalar>& alpha = _Scalar{8.0}) {
     return (a * exp(-alpha * a) + b * exp(-alpha * b)) / (exp(-alpha * a) + exp(-alpha * b));
+}
+
+template <Concepts::Scalar _Scalar>
+inline _Scalar Sign(const _Scalar& a) {
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    return CppAD::CondExpGt(a, _Scalar{0.0}, _Scalar{1.0}, _Scalar{0.0}) -
+           CppAD::CondExpLt(a, _Scalar{0.0}, _Scalar{1.0}, _Scalar{0.0});
+#else
+    return static_cast<real_t>(a > 0.0) - static_cast<real_t>(a < 0.0);
+#endif
+}
+
+template <Concepts::Scalar _Scalar>
+inline _Scalar Abs(const _Scalar& a) {
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
+    if constexpr (std::convertible_to<_Scalar, ad_scalar_t>) {
+        return CppAD::abs(a);
+    } else
+#else
+    if (std::convertible_to<_Scalar, real_t>) {
+        return std::abs(a);
+    } else
+#endif
+    {
+        Unreachable();
+    }
+}
+
+template <Concepts::Scalar _Scalar>
+inline _Scalar SmoothAbs(const _Scalar& a) {
+    return Utils::Sqrt(Utils::Pow(a, 2) + Eigen::NumTraits<_Scalar>::epsilon());
+}
+
+template <typename _Matrix>  // clang-format off
+requires (_Matrix::RowsAtCompileTime == 1 || _Matrix::RowsAtCompileTime == Eigen::Dynamic) &&
+         (_Matrix::ColsAtCompileTime == 1 || _Matrix::ColsAtCompileTime == Eigen::Dynamic)
+inline auto Squeeze(const Eigen::MatrixBase<_Matrix>& m) {  // clang-format on
+    if constexpr (_Matrix::RowsAtCompileTime == Eigen::Dynamic) {
+        UNGAR_ASSERT(m.rows() == 1_idx);
+    }
+    if constexpr (_Matrix::ColsAtCompileTime == Eigen::Dynamic) {
+        UNGAR_ASSERT(m.cols() == 1_idx);
+    }
+
+    return m.x();
+}
+
+namespace Internal {
+
+template <typename _AutodiffFunction>
+struct RealFunctionHelper {
+    RealFunctionHelper(const _AutodiffFunction& autodiffFunction_)
+        : autodiffFunction{autodiffFunction_} {
+    }
+
+    VectorXr operator()(auto&&... realVectors) const {
+        return autodiffFunction(
+                   std::forward<decltype(realVectors)>(realVectors).template cast<ad_scalar_t>()...)
+            .unaryExpr([](const auto& el) { return CppAD::Value(el).getValue(); });
+    }
+
+    _AutodiffFunction autodiffFunction;
+};
+
+}  // namespace Internal
+
+inline auto ToRealFunction(const auto& autodiffFunction) {
+    return Internal::RealFunctionHelper{autodiffFunction};
 }
 
 template <bool _LOWER_TRIANGULAR = false, typename _Matrix>  // clang-format off
