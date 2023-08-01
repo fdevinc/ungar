@@ -53,8 +53,48 @@ int main() {
 }
 ```
 
+### Getting Started
+To get started with Ungar, explore the `example/mpc` folder, which contains thoroughly documented code for three nonlinear model predictive control (MPC) implementations: one for a [quadrotor](example/mpc/quadrotor.example.cpp), another for a [radio-controlled miniature car](example/mpc/rc_car.example.cpp), and the third for a [quadruped robot](example/mpc/quadruped.example.cpp). These examples will help you quickly grasp how to utilize the library for your own control systems.
+
 ## Using Ungar
-> Coming soon...
+Ungar is designed to be easily integrated in C++ projects using [CMake][]. Since it is a C++20 library, it requires compilers with C++20 support, such as [GCC 11][], [Clang 16][], [MSVC 19][], etc. For users who need C++17 support, a dedicated version of Ungar is available on the `cxx17` branch, which offers all the major features of the main version.
+
+### FetchContent
+The recommended way to use Ungar is through [CMake][]'s [FetchContent][] module. To use Ungar in your CMake-based project, add the following lines to your project's _CMakeLists.txt_ file:
+```CMake
+include(FetchContent)
+
+message(STATUS "Fetching ungar...")
+FetchContent_Declare(
+  ungar
+  GIT_REPOSITORY https://github.com/fdevinc/ungar.git
+  GIT_TAG main  # For C++17: cxx17
+  GIT_SHALLOW TRUE
+  GIT_PROGRESS TRUE)
+
+# Configure Ungar build options (all options are OFF by default).
+set(UNGAR_BUILD_TESTS OFF)            # Turn ON to build Ungar's tests (requires GTest).
+set(UNGAR_BUILD_EXAMPLES ON)          # Turn OFF to not build Ungar's examples.
+set(UNGAR_ENABLE_LOGGING ON)          # Turn OFF to disable logging in Ungar.
+set(UNGAR_ENABLE_AUTODIFF ON)         # Not supported on Windows.
+set(UNGAR_ENABLE_OPTIMIZATION ON)     # Not supported on Windows.
+FetchContent_MakeAvailable(ungar)
+```
+The above lines automatically handle the download of all the required dependencies if the corresponding targets are not defined. This simplifies the integration process and ensures that your project has everything it needs to use Ungar seamlessly.
+
+Once you have added Ungar to your [CMake][] project using [FetchContent][], you can link your project to Ungar by adding the following line to your _CMakeLists.txt_:
+```CMake
+target_link_libraries(PROJECT ungar::ungar)
+```
+
+### Embedded
+Alternatively, you can directly embed the library into an existing [CMake][] project. To this end, copy and paste the entire source tree in a subdirectory and call `add_subdirectory` in your _CMakeLists.txt_ file:
+```CMake
+add_subdirectory(ungar)
+...
+target_link_libraries(PROJECT ungar::ungar)
+```
+Once again, make sure to configure the various Ungar's build options before adding its directory.
 
 ## Project Organization
 The project is organized in the following subdirectories:
@@ -79,3 +119,7 @@ Please see [LICENSE.md](LICENSE.md).
 [Eigen]: https://eigen.tuxfamily.org/index.php?title=Main_Page
 [Boost.Hana]: https://github.com/boostorg/hana
 [CMake]: http://www.cmake.org
+[FetchContent]: https://cmake.org/cmake/help/latest/module/FetchContent.html
+[GCC 11]: https://gcc.gnu.org/
+[Clang 16]: https://clang.llvm.org/
+[MSVC 19]: https://visualstudio.microsoft.com/vs/features/cplusplus/
