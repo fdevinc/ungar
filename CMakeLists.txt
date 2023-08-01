@@ -47,7 +47,7 @@ add_subdirectory(external)
 # Add compile options.
 # ##############################################################################
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # Clang.
-  message(WARNING "Clang is not supported.")
+  target_compile_options(ungar INTERFACE "-pedantic" "$<$<CONFIG:RELEASE>:-O2>")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # GNU Compiler Collection (GCC).
   target_compile_options(
     ungar
