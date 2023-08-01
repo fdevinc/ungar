@@ -32,6 +32,12 @@
 
 namespace Ungar {
 
+/**
+ * @brief Class representing a mapping between a variable and an Eigen vector.
+ *
+ * @tparam _Scalar      Scalar type for the underlying vector.
+ * @tparam _Variable    Variable type representing the variable being mapped.
+ */
 template <typename _Scalar, Concepts::Variable _Variable>
 class VariableMap : private VectorX<_Scalar>,
                     private VariableLazyMap<_Scalar, _Variable, hana::true_> {
@@ -40,6 +46,7 @@ class VariableMap : private VectorX<_Scalar>,
     using LazyMapType  = VariableLazyMap<_Scalar, _Variable, hana::true_>;
     using VariableType = _Variable;
 
+    // Helper function to calculate the implementation-defined size of a variable.
     template <Concepts::Variable _Var>
     static constexpr auto SizeCImpl(const _Var& var) {
         if constexpr (_Var::IsQuaternion()) {
@@ -49,8 +56,9 @@ class VariableMap : private VectorX<_Scalar>,
         }
     }
 
-    static auto __attribute__((optimize(0)))
-    InitImpl(LazyMapType lazyMap, const VariableType& var, Concepts::HanaBool auto initConstMap) {
+    static auto InitImpl(LazyMapType lazyMap,
+                         const VariableType& var,
+                         Concepts::HanaBool auto initConstMap) {
         add_const_if_t<LazyMapType, initConstMap>& lm{lazyMap};
 
         auto unique = var.Unique([](const auto& v) { return SizeCImpl(v); });
@@ -86,22 +94,74 @@ class VariableMap : private VectorX<_Scalar>,
         UNGAR_ASSERT(!var.Index());
     }
 
+    /**
+     * @brief Get vector representation of the variable map.
+     *
+     * The `VariableMap` class derives from `VectorX`, allowing direct access to the underlying
+     * vector data using the `Get` member function. This function returns a reference to the
+     * underlying vector, allowing access to its elements.
+     *
+     * @return Constant reference to the underlying vector.
+     */
     decltype(auto) Get() const {
         return static_cast<const VectorType&>(*this);
     }
 
+    /**
+     * @brief Get vector representation of the variable map.
+     *
+     * The `VariableMap` class derives from `VectorX`, allowing direct access to the underlying
+     * vector data using the `Get` member function. This function returns a reference to the
+     * underlying vector, allowing access to its elements.
+     *
+     * @return Reference to the underlying vector.
+     */
     decltype(auto) Get() {
         return static_cast<VectorType&>(*this);
     }
 
+    /**
+     * @brief Get constant reference to a sub-variable. See [1] for more details.
+     *
+     * @see   [1] Flavio De Vincenti and Stelian Coros. "Ungar -- A C++ Framework for
+     *            Real-Time Optimal Control Using Template Metaprogramming." 2023 IEEE/RSJ
+     *            International Conference on Intelligent Robots and Systems (IROS) (2023).
+     */
     decltype(auto) Get(auto&&... args) const {
         return Get1(AsLazyMap()._variable(std::forward<decltype(args)>(args)...));
     }
 
+    /**
+     * @brief Get reference to a sub-variable.
+     *
+     * @see   VariableMap::Get.
+     */
     decltype(auto) Get(auto&&... args) {
         return Get1(AsLazyMap()._variable(std::forward<decltype(args)>(args)...));
     }
 
+    /**
+     * @brief Get tuple of constant references to multiple sub-variables simultaneously.
+     *
+     * @see   VariableMap::Get.
+     */
+    decltype(auto) GetTuple(auto&&... vars) const {
+        return std::forward_as_tuple(Get(std::forward<decltype(vars)>(vars))...);
+    }
+
+    /**
+     * @brief Get tuple of references to multiple sub-variables simultaneously.
+     *
+     * @see   VariableMap::Get.
+     */
+    decltype(auto) GetTuple(auto&&... vars) {
+        return std::forward_as_tuple(Get(std::forward<decltype(vars)>(vars))...);
+    }
+
+    /**
+     * @todo Remove (sub-variables should only be accessed using \c Get and \c \GetTuple
+     *       member functions).
+     */
     template <Concepts::Variable _Var>
     const auto& Get1(const _Var& var) const {
         if constexpr (decltype(hana::contains(_constImpl, SizeCImpl(var)))::value) {
@@ -116,6 +176,10 @@ class VariableMap : private VectorX<_Scalar>,
         }
     }
 
+    /**
+     * @todo Remove (sub-variables should only be accessed using \c Get and \c \GetTuple
+     *       member functions).
+     */
     template <Concepts::Variable _Var>
     auto& Get1(const _Var& var) {
         if constexpr (decltype(hana::contains(_impl, SizeCImpl(var)))::value) {
@@ -138,6 +202,19 @@ class VariableMap : private VectorX<_Scalar>,
 template <typename _Scalar, Concepts::Variable _Variable>
 VariableMap(const _Variable& var, hana::basic_type<_Scalar>) -> VariableMap<_Scalar, _Variable>;
 
+/**
+ * @brief Create `VariableMap` object with the specified variable and scalar type.
+ *
+ * This function creates a `VariableMap` object using the specified scalar type and the given
+ * variable. The resulting `VariableMap` can be used to access and manipulate the values of the
+ * variables using both vector-like and variable-like interfaces. The `VariableMap` provides
+ * constant access to the variable values.
+ *
+ * @tparam _Scalar  Scalar type for the underlying vector in the `VariableMap`.
+ * @param[in] var   Variable object to be used for creating the `VariableMap`.
+ * @return VariableMap object that represents the provided variable with the specified
+ *         scalar type.
+ */
 template <typename _Scalar>
 inline static auto MakeVariableMap(const Concepts::Variable auto& var) {
     return VariableMap{hana::type_c<_Scalar>, var};
