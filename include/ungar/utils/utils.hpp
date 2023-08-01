@@ -979,6 +979,7 @@ inline auto Squeeze(const Eigen::MatrixBase<_Matrix>& m) {  // clang-format on
     return m.x();
 }
 
+#ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
 namespace Internal {
 
 template <typename _AutodiffFunction>
@@ -1001,6 +1002,7 @@ struct RealFunctionHelper {
 inline auto ToRealFunction(const auto& autodiffFunction) {
     return Internal::RealFunctionHelper{autodiffFunction};
 }
+#endif
 
 template <bool _LOWER_TRIANGULAR = false, typename _Matrix>  // clang-format off
 requires (Concepts::DenseMatrixExpression<_Matrix> || Concepts::SparseMatrixExpression<_Matrix>) && (!_Matrix::IsRowMajor)
