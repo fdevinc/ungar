@@ -8,3 +8,14 @@ if(UNGAR_ENABLE_AUTODIFF)
   add_executable(function.example autodiff/function.example.cpp)
   target_link_libraries(function.example ungar::ungar)
 endif()
+
+if(UNGAR_ENABLE_OPTIMIZATION)
+  add_executable(quadrotor.example mpc/quadrotor.example.cpp)
+  target_link_libraries(quadrotor.example ungar::ungar)
+
+  add_executable(quadruped.example mpc/quadruped.example.cpp)
+  target_link_libraries(quadruped.example ungar::ungar)
+
+  add_executable(rc_car.example mpc/rc_car.example.cpp)
+  target_link_libraries(rc_car.example ungar::ungar)
+endif()
