@@ -16,6 +16,8 @@ ExternalProject_Add(
   URL https://github.com/joaoleal/CppADCodeGen/archive/refs/tags/v2.4.3.zip
   URL_HASH
     SHA256=ed2be58bbd4912bf675c088ca06a508d8470a5ff68b0e6c2963d530177121408
+  PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/cppadcodegen.patch
+  UPDATE_DISCONNECTED 1
   CMAKE_CACHE_ARGS
     -DCPPAD_HOME:STRING=${CMAKE_BINARY_DIR}/external/cppad/include
     -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/external/cppadcodegen

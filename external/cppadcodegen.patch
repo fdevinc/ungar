@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 174f63c..9d8ac03 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -176,9 +176,9 @@ ADD_SUBDIRECTORY(python)
+ ADD_SUBDIRECTORY(pkgconfig)
+ ADD_SUBDIRECTORY(doc)
+ 
+-# enable testing must be called here in order for the target test to be created
+-ENABLE_TESTING()
+-ADD_SUBDIRECTORY(test EXCLUDE_FROM_ALL)
++# # enable testing must be called here in order for the target test to be created
++# ENABLE_TESTING()
++# ADD_SUBDIRECTORY(test EXCLUDE_FROM_ALL)
+ 
+ # =============================================================================
+ # uninstall procedure

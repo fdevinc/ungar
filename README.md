@@ -72,7 +72,7 @@ FetchContent_Declare(
   GIT_PROGRESS TRUE)
 
 # Configure Ungar build options (all options are OFF by default).
-set(UNGAR_BUILD_TESTS OFF)            # Turn ON to build Ungar's tests (requires GTest).
+set(UNGAR_BUILD_TESTS OFF)            # Turn ON to build Ungar's tests.
 set(UNGAR_BUILD_EXAMPLES ON)          # Turn OFF to not build Ungar's examples.
 set(UNGAR_ENABLE_LOGGING ON)          # Turn OFF to disable logging in Ungar.
 set(UNGAR_ENABLE_AUTODIFF ON)         # Not supported on Windows.
