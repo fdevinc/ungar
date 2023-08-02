@@ -13,12 +13,11 @@ ExternalProject_Add(
 
 ExternalProject_Add(
   cppadcodegen
-  URL https://github.com/joaoleal/CppADCodeGen/archive/refs/tags/v2.4.3.zip
+  URL https://github.com/fdevinc/CppADCodeGen/archive/refs/tags/v2.4.3-ungar.zip
   URL_HASH
-    SHA256=ed2be58bbd4912bf675c088ca06a508d8470a5ff68b0e6c2963d530177121408
-  PATCH_COMMAND patch < ${CMAKE_CURRENT_SOURCE_DIR}/cppadcodegen.patch
-  UPDATE_DISCONNECTED 1
+    SHA256=63adcd082b6de959763460797619dcdef92353498b8ccdf0a312ae0a91dd1d3a
   CMAKE_CACHE_ARGS
     -DCPPAD_HOME:STRING=${CMAKE_BINARY_DIR}/external/cppad/include
     -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/external/cppadcodegen
+    -DCPPADCODEGEN_BUILD_TESTS:BOOL=OFF
   DEPENDS cppad)
