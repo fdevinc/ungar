@@ -1,4 +1,5 @@
 # Ungar
+[![CI](https://github.com/fdevinc/ungar/actions/workflows/ungar-ci.yml/badge.svg)](https://github.com/fdevinc/ungar/actions/workflows/ungar-ci.yml)
 
 > Simplifying optimal control with metaprogramming
 ## Overview
