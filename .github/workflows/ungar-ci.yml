@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        compiler: [ gcc-11 ]
+        compiler: [ gcc-11, gcc-13 ]
 
     runs-on: ${{ matrix.os }}
     steps:

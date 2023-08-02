@@ -125,21 +125,21 @@ struct  formatter<_HanaStruct> {  // clang-format on
 
         std::string buffer;
         hana::length(hanaStruct).times.with_index([&](auto i) {
-            std::ignore = presentation == 'v' ? format_to(std::back_inserter(buffer),
-                                                          "{}{} = {}",
-                                                          separator(i),
-                                                          hana::keys(hanaStruct)[i].c_str(),
-                                                          hana::members(hanaStruct)[i])
-                                              : format_to(std::back_inserter(buffer),
-                                                          "{}{}",
-                                                          separator(i),
-                                                          hana::members(hanaStruct)[i]);
+            std::ignore = presentation == 'v' ? fmt::format_to(std::back_inserter(buffer),
+                                                               "{}{} = {}",
+                                                               separator(i),
+                                                               hana::keys(hanaStruct)[i].c_str(),
+                                                               hana::members(hanaStruct)[i])
+                                              : fmt::format_to(std::back_inserter(buffer),
+                                                               "{}{}",
+                                                               separator(i),
+                                                               hana::members(hanaStruct)[i]);
         });
 
         if (presentation == 'v') {
-            return format_to(ctx.out(), "\n{{\n{}\n}}", buffer);
+            return fmt::format_to(ctx.out(), "\n{{\n{}\n}}", buffer);
         } else {
-            return format_to(ctx.out(), "{{ {} }}", buffer);
+            return fmt::format_to(ctx.out(), "{{ {} }}", buffer);
         }
     }
 };

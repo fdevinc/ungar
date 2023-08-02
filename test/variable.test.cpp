@@ -52,19 +52,19 @@ constexpr auto ipm_mass  = var_c<"ipm_mass", 1>;
 constexpr auto srbd_mass = var_c<"srbd_mass", 1>;
 constexpr auto Rho       = var_c<"Rho"> <<= (NUM_IPMS * ipm_mass, NUM_SRBDS* srbd_mass);
 
-constexpr auto rollout_variables = var_c<"rollout_variables"> <<= (X, Rho);
+constexpr auto variables = var_c<"variables"> <<= (X, Rho);
 
 TEST(RolloutVariablesTest, VariableMapAccess) {
     using namespace Ungar;
 
-    auto map     = MakeVariableMap<real_t>(rollout_variables);
-    auto lazyMap = VariableLazyMap{map.Get(), rollout_variables};
+    auto map     = MakeVariableMap<real_t>(variables);
+    auto lazyMap = VariableLazyMap{map.Get(), variables};
 
     for (const auto i : enumerate(1024)) {
         map.Get().setRandom();
 
-        EXPECT_EQ(map.Get(rollout_variables), map.Get());
-        EXPECT_EQ(map.Get(rollout_variables), lazyMap.Get(rollout_variables));
+        EXPECT_EQ(map.Get(variables), map.Get());
+        EXPECT_EQ(map.Get(variables), lazyMap.Get(variables));
         EXPECT_EQ(map.Get(X), lazyMap.Get(X));
         EXPECT_EQ(map.Get(Rho), lazyMap.Get(Rho));
         for (const auto k : enumerate(N)) {
@@ -79,7 +79,7 @@ TEST(RolloutVariablesTest, VariableMapAccess) {
             }
 
             for (const auto srbdIndex : enumerate(NUM_SRBDS)) {
-                const auto& var = rollout_variables(srbd_state, k, srbdIndex);
+                const auto& var = variables(srbd_state, k, srbdIndex);
                 EXPECT_EQ(map.Get1(var), lazyMap.Get1(var));
                 EXPECT_EQ(map.Get1(var(position)), lazyMap.Get1(var(position)));
                 EXPECT_EQ(map.Get1(var(orientation)), lazyMap.Get1(var(orientation)));
@@ -101,13 +101,13 @@ TEST(RolloutVariablesTest, VariableMapAccess) {
 TEST(RolloutVariablesTest, VariableMapAssignment) {
     using namespace Ungar;
 
-    auto map = MakeVariableMap<real_t>(rollout_variables);
+    auto map = MakeVariableMap<real_t>(variables);
 
     map.Get().setZero();
 
     for (const auto k : enumerate(N)) {
         for (const auto ipmIndex : enumerate(NUM_IPMS)) {
-            const auto& var = rollout_variables(ipm_state, k, ipmIndex);
+            const auto& var = variables(ipm_state, k, ipmIndex);
             map.Get1(var).setOnes();
         }
 
@@ -119,7 +119,7 @@ TEST(RolloutVariablesTest, VariableMapAssignment) {
     }
 
     for (const auto ipmIndex : enumerate(NUM_IPMS)) {
-        const auto& var = rollout_variables(ipm_mass, ipmIndex);
+        const auto& var = variables(ipm_mass, ipmIndex);
         map.Get1(var)   = 1.0;
     }
 
