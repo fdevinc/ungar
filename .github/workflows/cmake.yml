@@ -12,11 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        repository: google/osqp-cpp
-        token: ${{ secrets.GITHUB_TOKEN }}
-        ref: master        
+    - uses: actions/checkout@v3      
 
     - name: Configure CMake
       run: cmake -DUNGAR_BUILD_TESTS=ON

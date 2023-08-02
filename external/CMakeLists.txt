@@ -71,10 +71,9 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   message(STATUS "Fetching osqpcpp...")
   FetchContent_Declare(
     osqpcpp
-    GIT_REPOSITORY git@github.com:google/osqp-cpp.git
-    GIT_TAG master
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE)
+    URL https://github.com/google/osqp-cpp/archive/refs/heads/master.zip
+    URL_HASH
+      SHA256=5158b39ea402a6f12fec9a01a3b03a6da418d95253a8e7747bad888d3284914f)
   set(OSQP-CPP_BUILD_TESTS OFF)
   FetchContent_MakeAvailable(osqpcpp)
 endif()
