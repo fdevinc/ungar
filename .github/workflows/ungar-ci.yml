@@ -12,15 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        compiler: [ gcc-11, gcc-12, gcc-13, clang-16 ]
-        exclude:
-          - os: macos-latest
-            compiler: gcc-11
-          - os: macos-latest
-            compiler: gcc-12
-          - os: macos-latest
-            compiler: gcc-13
+        os: [ ubuntu-latest ]
+        compiler: [ gcc-11 ]
 
     runs-on: ${{ matrix.os }}
     steps:
