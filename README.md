@@ -59,7 +59,7 @@ To get started with Ungar, explore the `example/mpc` folder, which contains thor
 ## Using Ungar
 Ungar is designed to be easily integrated in C++ projects using [CMake][]. Since it is a C++20 library, it requires compilers with C++20 support, such as [GCC 11][], [Clang 16][], [MSVC 19][], etc. For users who need C++17 support, a dedicated version of Ungar is available on the `cxx17` branch, which offers all the major features of the main version.
 
-> :warning: **[GCC 12](https://gcc.gnu.org/gcc-12/) is not supported!** When attempting to create variables, you may encounter [internal compiler errors (ICEs)](https://stackoverflow.com/a/12405680). Fortunately, this issue is absent in both [GCC 11](https://gcc.gnu.org/gcc-11/) and [GCC 13](https://gcc.gnu.org/gcc-13/), making them suitable alternatives.
+> :warning: **[GCC 12](https://gcc.gnu.org/gcc-12/) is not supported!** When attempting to create Ungar's variables, you may encounter [internal compiler errors (ICEs)](https://stackoverflow.com/a/12405680). Fortunately, this issue is absent in both [GCC 11](https://gcc.gnu.org/gcc-11/) and [GCC 13](https://gcc.gnu.org/gcc-13/), making them suitable alternatives.
 
 ### FetchContent
 The recommended way to use Ungar is through [CMake][]'s [FetchContent][] module. To use Ungar in your CMake-based project, add the following lines to your project's _CMakeLists.txt_ file:
