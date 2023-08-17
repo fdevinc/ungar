@@ -163,13 +163,6 @@ struct same
 template <typename _T1, typename _T2, typename... _Args>
 constexpr bool same_v = same<_T1, _T2, _Args...>::value;
 
-template <typename _ContiguousRangeOf, typename _T>
-struct contiguous_range_of
-    : std::conjunction<std::bool_constant<nano::ranges::contiguous_range<_ContiguousRangeOf>>,
-                       std::is_same<nano::ranges::range_value_t<_ContiguousRangeOf>, _T>> {};
-template <typename _ContiguousRangeOf, typename _T>
-constexpr bool contiguous_range_of_v = contiguous_range_of<_ContiguousRangeOf, _T>::value;
-
 template <typename... _BoolConstants>
 struct conjunction : std::bool_constant<(_BoolConstants::value && ...)> {};
 
@@ -386,9 +379,8 @@ constexpr auto enumerate(const index_t n) {
 }
 
 template <typename _T>
-constexpr auto cast_to = nano::views::transform([](auto&& el) -> decltype(auto) {
-    return static_cast<_T>(std::forward<decltype(el)>(el));
-});
+constexpr auto cast_to = nano::views::transform(
+    [](auto&& el) -> decltype(auto) { return static_cast<_T>(std::forward<decltype(el)>(el)); });
 
 template <typename _T, bool _B>
 using add_const_if = std::conditional<_B, std::add_const_t<_T>, _T>;

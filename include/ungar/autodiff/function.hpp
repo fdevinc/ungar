@@ -201,7 +201,7 @@ class Function {  // clang-format on
 
     template <typename _XP,
               typename _Y,
-              std::enable_if_t<contiguous_range_of_v<_Y, real_t> &&
+              std::enable_if_t<nano::ranges::contiguous_range<_Y> &&
                                    std::is_same_v<real_t, typename _XP::Scalar>,
                                bool> = true>  // clang-format off
     void Evaluate(const Eigen::MatrixBase<_XP>& xp, _Y&& y) const {  // clang-format on
