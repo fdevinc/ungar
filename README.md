@@ -1,4 +1,7 @@
 # Ungar
+[![Language](https://img.shields.io/badge/c%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+[![Language](https://img.shields.io/badge/c%2B%2B-17-orange.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/fdevinc/ungar/actions/workflows/ungar-ci.yml/badge.svg)](https://github.com/fdevinc/ungar/actions/workflows/ungar-ci.yml)
 
 > Simplifying optimal control with metaprogramming
