@@ -117,6 +117,18 @@ Ungar is a project meant for long-term maintenance. While the core API of the li
 over time. The current implementations will be enhanced to achieve faster compile times. Finally, new algorithms and types will be introduced to
 make the creation of optimal control problems as straightforward as possible.
 
+## Citing Ungar
+If you are using Ungar for your work, we encourage you to cite the related paper:
+```
+@inproceedings{ungar23,
+  title={{U}ngar -- {A} {C}++ Framework for Real-Time Optimal Control Using Template Metaprogramming}, 
+  author={De Vincenti, Flavio and Coros, Stelian},
+  booktitle={2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  year={2023},
+  organization={IEEE},
+}
+```
+
 ## License
 Please see [LICENSE.md](LICENSE.md).
 
