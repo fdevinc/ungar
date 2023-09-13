@@ -12,30 +12,25 @@ using namespace Ungar;
 
 int main() {
     /***************                     QUADROTOR MODEL                      ***************/
-    /***************     Define numeric invariants as integral constants.     ***************/
+    // Define numeric invariants as integral constants.
     constexpr auto N = 30_c;  // Discrete time horizon.
     constexpr auto NUM_ROTORS = 4_c;
 
-    /***************                 Define "leaf" variables.                 ***************/
-    // Positions are 3-dimensional vectors, orientations are unit quaternions,
-    // rotor speeds are scalars, etc.
-    UNGAR_VARIABLE(position, 3);          // := p
-    UNGAR_VARIABLE(orientation, Q);       // := q
-    UNGAR_VARIABLE(linear_velocity, 3);   // := pDot
-    UNGAR_VARIABLE(angular_velocity, 3);  // := omega
-    UNGAR_VARIABLE(rotor_speed, 1);       // := r
-
-    /***************                Define "branch" variables.                ***************/
-    // States are stacked poses and velocities, while inputs are stacked rotor
-    // speeds: one for each rotor.
+    // Define variables.
+    UNGAR_VARIABLE(position, 3);                                    // := p
+    UNGAR_VARIABLE(orientation, Q);                                 // := q
+    UNGAR_VARIABLE(linear_velocity, 3);                             // := pDot
+    UNGAR_VARIABLE(angular_velocity, 3);                            // := omega
     UNGAR_VARIABLE(x) <<=
         (position, orientation, linear_velocity, angular_velocity); // x := [p q pDot omega]
-    UNGAR_VARIABLE(u) <<= NUM_ROTORS * rotor_speed;                 // u := [r0 r1 r2 r3]
     UNGAR_VARIABLE(X) <<= (N + 1_c) * x;                            // X := [x0 x1 ... xN]
+
+    UNGAR_VARIABLE(rotor_speed, 1);                                 // := r
+    UNGAR_VARIABLE(u) <<= NUM_ROTORS * rotor_speed;                 // u := [r0 r1 r2 r3]
     UNGAR_VARIABLE(U) <<= N * u;                                    // U := [u0 u1 ... uN-1]
+
     UNGAR_VARIABLE(variables) <<= (X, U);
 
-    /***************            Instantiate and use variable maps.            ***************/
     // Access information about variables at compile time.
     static_assert(x.Size() == 13);
     static_assert(variables(x, 0).Index() == 0);         // [{x0} x1  x2  ...  xN  u0  ... ]
@@ -54,6 +49,7 @@ int main() {
     static_assert(std::same_as<decltype(vars.Get(orientation, 0)), Eigen::Map<Quaternionr>&>);
     static_assert(std::same_as<decltype(vars.Get(x, 0)), Eigen::Map<Vector<real_t, 13>>&>);
 }
+
 ```
 
 ### Getting Started
