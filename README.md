@@ -114,7 +114,7 @@ over time. The current implementations will be enhanced to achieve faster compil
 make the creation of optimal control problems as straightforward as possible.
 
 ## Citing Ungar
-If you are using Ungar for your work, we encourage you to cite the related paper:
+If you are using Ungar for your work, we encourage you to cite the [related paper](https://arxiv.org/abs/2309.06783):
 ```
 @inproceedings{ungar23,
   title={{U}ngar -- {A} {C}++ Framework for Real-Time Optimal Control Using Template Metaprogramming}, 
