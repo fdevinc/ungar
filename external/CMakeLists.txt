@@ -73,7 +73,7 @@ if(UNGAR_ENABLE_OPTIMIZATION)
     osqpcpp
     URL https://github.com/google/osqp-cpp/archive/refs/heads/master.zip
     URL_HASH
-      SHA256=5158b39ea402a6f12fec9a01a3b03a6da418d95253a8e7747bad888d3284914f)
+      SHA256=20dcb37b03145c4fe4cb5b97e3e011fe5355def0c149462893f6172eeb303358)
   set(OSQP-CPP_BUILD_TESTS OFF)
   FetchContent_MakeAvailable(osqpcpp)
 endif()
