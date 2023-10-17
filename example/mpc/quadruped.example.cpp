@@ -224,8 +224,6 @@ int main() {
             const auto pDotRef   = variables_.Get(reference_linear_velocity, k);
             const auto bOmegaRef = variables_.Get(b_reference_angular_velocity, k);
 
-            const auto uk = variables_.Get(u, k);
-
             // Reference state tracking.
             value += (Vector3r{0.1, 0.1, 10.0}.cwiseProduct(p - pRef).squaredNorm() +
                       Utils::Min((q.coeffs() - qRef.coeffs()).squaredNorm(),

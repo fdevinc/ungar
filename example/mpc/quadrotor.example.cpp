@@ -211,21 +211,21 @@ int main() {
             const auto pDotRef   = variables_.Get(reference_linear_velocity, k);
             const auto bOmegaRef = variables_.Get(b_reference_angular_velocity, k);
 
-            const auto uk = variables_.Get(u, k);
-
             // Reference state tracking.
             value += ((p - pRef).squaredNorm() +
                       Utils::Min((q.coeffs() - qRef.coeffs()).squaredNorm(),
                                  (q.coeffs() + qRef.coeffs()).squaredNorm()) +
                       (pDot - pDotRef).squaredNorm() + (bOmega - bOmegaRef).squaredNorm());
-            if (k) {
+            if (k && k != N) {
                 // Regularization of input variations.
                 const auto ukm1 = variables_.Get(u, k - 1_step);
+                const auto uk   = variables_.Get(u, k);
 
                 value += 1e-6 * (uk - ukm1).squaredNorm();
             }
             if (k != N) {
                 // Input regularization.
+                const auto uk = variables_.Get(u, k);
                 value += 1e-6 * uk.squaredNorm();
             }
         }
