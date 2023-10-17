@@ -41,6 +41,7 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add external dependencies.
+set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 add_subdirectory(external)
 
 # ##############################################################################
