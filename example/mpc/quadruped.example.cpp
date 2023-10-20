@@ -420,6 +420,15 @@ int main() {
         }
     }
 
+    // Reference contact states.
+    /// @brief Initialize all feet of the robot on the ground for the whole time
+    ///        horizon.
+    for (const auto k : enumerate(N + 1_step)) {
+        for (const auto i : enumerate(NUM_LEGS)) {
+            variables_.Get(reference_contact_state, k, i) = 1.0;
+        }
+    }
+
     // Reference trajectories.
     /// @brief Command the quadruped to track a sinusoidal trajectory along the z-axis
     ///        while rotating about the z-axis using a pace gait.
