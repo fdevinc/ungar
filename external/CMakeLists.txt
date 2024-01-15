@@ -208,6 +208,7 @@ if(UNGAR_ENABLE_LOGGING)
     find_package(spdlog REQUIRED)
   endif()
   set_target_properties(spdlog::spdlog PROPERTIES IMPORTED_GLOBAL TRUE)
+  set_target_properties(spdlog::spdlog_header_only PROPERTIES IMPORTED_GLOBAL TRUE)
 
   if(DEFINED SPDLOG_ROOT_DIRECTORY)
     message(STATUS "spdlog found at '${SPDLOG_ROOT_DIRECTORY}'.")

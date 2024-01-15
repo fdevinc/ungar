@@ -219,9 +219,7 @@ class Variable {
      * @return New "branch" variable with an additional sub-variable in the
      *         corresponding hierarchy.
      */
-    constexpr auto operator<<=(Concepts::Variable auto var) const
-        requires(IsBranch())
-    {
+    constexpr auto operator<<=(Concepts::Variable auto var) const requires(IsBranch()) {
         auto map = hana::insert(
             _map, hana::make_pair(var.Name(), var.CloneWithIndexOffset(Index() + SizeC())));
         return Make(Name(), map, Index(), 0_c);
@@ -240,8 +238,7 @@ class Variable {
      *         sub-variables in the corresponding hierarchy.
      */
     constexpr auto operator<<=(Concepts::VariableProductExpr auto prodExpr) const
-        requires(IsBranch())
-    {
+        requires(IsBranch()) {
         auto array = hana::unpack(hana::make_range(0_c, prodExpr.cnt), [&](auto... is) {
             return std::array{prodExpr.var.CloneWithIndexOffset(Index() + SizeC() +
                                                                 prodExpr.var.SizeC() * is)...};
@@ -263,9 +260,7 @@ class Variable {
      *         array of identical sub-variables for each element in the input
      *         tuple.
      */
-    constexpr auto operator<<=(Concepts::HanaTuple auto tuple) const
-        requires(IsBranch())
-    {
+    constexpr auto operator<<=(Concepts::HanaTuple auto tuple) const requires(IsBranch()) {
         auto lambda = [&](auto var, auto el) { return var <<= el; };
         return hana::fold(tuple, *this, lambda);
     }
@@ -276,8 +271,7 @@ class Variable {
      */
     template <Concepts::HanaString _N>
     constexpr const auto& Get(_N name) const
-        requires(hana::contains(hana::keys(_Map{}), _N{}).value)
-    {
+        requires(hana::contains(hana::keys(_Map{}), _N{}).value) {
         if constexpr (!is_std_array_v<std::remove_cvref_t<decltype(DefaultMap()[_N{}])>>) {
             return _map[name];
         } else {
@@ -379,8 +373,7 @@ class Variable {
      *       or \c At member functions).
      */
     constexpr const auto& Get(auto key, auto... args) const
-        requires(hana::contains(hana::keys(_Map{}), decltype(key)::Name()).value)
-    {
+        requires(hana::contains(hana::keys(_Map{}), decltype(key)::Name()).value) {
         return Get(key).Get(args...);
     }
 
@@ -596,7 +589,7 @@ class Variable {
     }
 
     template <Concepts::HanaString _N, Concepts::HanaMap _M, Concepts::HanaIntegralConstant _S>
-    static constexpr auto Make(_N name, _M map, const index_t index, _S size) {
+    static constexpr auto Make(_N name, _M map, const index_t index, _S /* size */) {
         return Variable<_N, _M, _S::value>{name, map, index};
     }
 
