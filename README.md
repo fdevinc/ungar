@@ -116,7 +116,7 @@ make the creation of optimal control problems as straightforward as possible.
 ## Citing Ungar
 If you are using Ungar for your work, we encourage you to cite the [related paper](https://arxiv.org/abs/2309.06783):
 ```
-@INPROCEEDINGS{10341365,
+@INPROCEEDINGS{DeVincenti-IROS-23,
   author={De Vincenti, Flavio and Coros, Stelian},
   booktitle={2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
   title={Ungar - A C++ Framework for Real-Time Optimal Control Using Template Metaprogramming}, 
@@ -125,6 +125,18 @@ If you are using Ungar for your work, we encourage you to cite the [related pape
   number={},
   pages={6297-6303},
   doi={10.1109/IROS55552.2023.10341365}}
+```
+Ungar was used to implement the centralized MPC controller presented in the [following publication](https://www.roboticsproceedings.org/rss19/p050.html):
+```
+@INPROCEEDINGS{DeVincenti-RSS-23, 
+    AUTHOR    = {Flavio De Vincenti AND Stelian Coros}, 
+    TITLE     = {{Centralized Model Predictive Control for Collaborative Loco-Manipulation}}, 
+    BOOKTITLE = {Proceedings of Robotics: Science and Systems}, 
+    YEAR      = {2023}, 
+    ADDRESS   = {Daegu, Republic of Korea}, 
+    MONTH     = {July}, 
+    DOI       = {10.15607/RSS.2023.XIX.050} 
+}
 ```
 
 ## License
