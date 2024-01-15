@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(ExternalCppAD NONE)
+
+include(ExternalProject)
+
+ExternalProject_Add(
+  CppAD-20230000.0
+  URL https://github.com/coin-or/CppAD/archive/refs/tags/20230000.0.zip
+  URL_HASH
+    SHA256=a5a6b32e026c01f71dba580552176cd9fc69b72ec3156c9438552d42068ac54a
+  CMAKE_CACHE_ARGS
+    -Dcppad_prefix:STRING=@CMAKE_BINARY_DIR@/external/CppAD/install
+  UPDATE_DISCONNECTED 1)

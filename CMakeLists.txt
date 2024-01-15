@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(Ungar VERSION 1.0.0)
+project(Ungar VERSION 1.0.1)
 
 add_library(ungar INTERFACE)
 add_library(ungar::ungar ALIAS ungar)
@@ -9,40 +9,46 @@ target_compile_features(ungar INTERFACE cxx_std_20)
 # ##############################################################################
 # Set up CMake options.
 # ##############################################################################
+include(CMakeDependentOption)
+
+option(
+  UNGAR_USE_SYSTEM_LIBRARIES
+  "Prevent automatic download of missing external dependencies. To selectively use system-wide packages, provide their installation prefixes as CMake variables of the form '<PackageName>_ROOT', where <PackageName> is the (case-preserved) name given to the find_package() call and _ROOT is literal."
+  OFF)
 option(UNGAR_BUILD_TESTS "Add targets for unit testing." OFF)
 option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." OFF)
-option(UNGAR_ENABLE_LOGGING "Enable Ungar's logging functionalities." OFF)
-option(UNGAR_ENABLE_AUTODIFF "Enable Ungar's autodiff interface." OFF)
+option(UNGAR_INSTALL "Install CMake targets during install step." OFF)
 option(UNGAR_ENABLE_OPTIMIZATION
        "Enable Ungar's nonlinear programming interface." OFF)
-
-if(UNGAR_ENABLE_AUTODIFF AND NOT UNGAR_ENABLE_LOGGING)
-  message(
-    FATAL_ERROR
-      "Ungar's autodiff interface requires logging functionalities."
-      " To enable logging, set the CMake flag UNGAR_ENABLE_LOGGING to 'ON'.")
-endif()
-if(UNGAR_ENABLE_OPTIMIZATION
-   AND NOT UNGAR_ENABLE_LOGGING
-   AND NOT UNGAR_ENABLE_AUTODIFF)
-  message(
-    FATAL_ERROR
-      "Ungar's optimization interface requires logging and autodiff functionalities."
-      " To enable both, set the CMake flags UNGAR_ENABLE_LOGGING and UNGAR_ENABLE_AUTODIFF to 'ON'."
-  )
-endif()
-if(UNGAR_BUILD_EXAMPLES AND NOT UNGAR_ENABLE_LOGGING)
-  message(
-    FATAL_ERROR
-      "Ungar's examples require logging functionalities."
-      " To enable logging, set the CMake flag UNGAR_ENABLE_LOGGING to 'ON'.")
-endif()
+cmake_dependent_option(
+  UNGAR_ENABLE_LOGGING
+  "Enable Ungar's logging functionalities. Automatically enabled if any of the flags 'UNGAR_ENABLE_AUTODIFF', 'UNGAR_ENABLE_OPTIMIZATION', and 'UNGAR_BUILD_EXAMPLES' is set to 'ON'."
+  OFF
+  "NOT UNGAR_ENABLE_AUTODIFF;NOT UNGAR_ENABLE_OPTIMIZATION;NOT UNGAR_BUILD_EXAMPLES"
+  ON)
+cmake_dependent_option(
+  UNGAR_ENABLE_AUTODIFF
+  "Enable Ungar's autodiff interface. Automatically enabled if 'UNGAR_ENABLE_OPTIMIZATION' is set to 'ON'."
+  OFF
+  "NOT UNGAR_ENABLE_OPTIMIZATION"
+  ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+message(STATUS "--------------------------------------------------")
+message(STATUS "Configuring Ungar with the following options:")
+message(STATUS "    Enable logging         : ${UNGAR_ENABLE_LOGGING}")
+message(STATUS "    Enable autodiff        : ${UNGAR_ENABLE_AUTODIFF}")
+message(STATUS "    Enable optimization    : ${UNGAR_ENABLE_OPTIMIZATION}")
+message(STATUS "    Build examples         : ${UNGAR_BUILD_EXAMPLES}")
+message(STATUS "    Build tests            : ${UNGAR_BUILD_TESTS}")
+message(STATUS "    Install                : ${UNGAR_INSTALL}")
+message(STATUS "    Use system libraries   : ${UNGAR_USE_SYSTEM_LIBRARIES}")
 
 # Add external dependencies.
 set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 add_subdirectory(external)
+message(STATUS "--------------------------------------------------")
 
 # ##############################################################################
 # Add compile options.
@@ -71,22 +77,21 @@ endif()
 # Set Ungar's include directories and link libraries.
 # ##############################################################################
 # Core modules.
-list(APPEND UNGAR_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include")
-list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen Boost::hana)
+list(APPEND UNGAR_INCLUDE_DIRECTORIES
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+     $<INSTALL_INTERFACE:include>)
+list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen hana)
 
 # Optional modules.
 if(UNGAR_ENABLE_LOGGING)
   list(APPEND UNGAR_LINK_LIBRARIES spdlog::spdlog)
 endif()
 if(UNGAR_ENABLE_AUTODIFF)
-  list(APPEND UNGAR_INCLUDE_DIRECTORIES
-       "${CMAKE_BINARY_DIR}/external/cppad/include"
-       "${CMAKE_BINARY_DIR}/external/cppadcodegen/include")
-  list(APPEND UNGAR_LINK_LIBRARIES ${cppad_lib} ${CMAKE_DL_LIBS}
-       finitediff::finitediff)
+  list(APPEND UNGAR_LINK_LIBRARIES CppAD::CppAD CppADCodeGen::CppADCodeGen
+       ${CMAKE_DL_LIBS} finitediff::finitediff)
 endif()
 if(UNGAR_ENABLE_OPTIMIZATION)
-  list(APPEND UNGAR_LINK_LIBRARIES osqp-cpp)
+  list(APPEND UNGAR_LINK_LIBRARIES osqp-cpp::osqp-cpp)
 endif()
 
 target_include_directories(ungar INTERFACE ${UNGAR_INCLUDE_DIRECTORIES})
@@ -128,3 +133,59 @@ endif()
 if(UNGAR_BUILD_EXAMPLES)
   add_subdirectory(example)
 endif()
+
+if(UNGAR_INSTALL)
+  if(UNGAR_ENABLE_AUTODIFF)
+    if(NOT DEFINED CppAD_ROOT)
+      message(
+        STATUS
+          "To install Ungar, the prefix path of 'CppAD' must be provided as a CMake variable named 'CppAD_ROOT'. Using default value: '/usr/local'."
+      )
+      set(CppAD_ROOT /usr/local)
+    endif()
+    if(NOT DEFINED CppADCodeGen_ROOT)
+      message(
+        STATUS
+          "To install Ungar, the prefix path of 'CppADCodeGen' must be provided as a CMake variable named 'CppADCodeGen_ROOT'. Using default value: '/usr/local'."
+      )
+      set(CppADCodeGen_ROOT /usr/local)
+    endif()
+  endif(UNGAR_ENABLE_AUTODIFF)
+
+  include(GNUInstallDirs)
+
+  # Install library headers.
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+  # Install library binaries.
+  install(
+    TARGETS ungar
+    EXPORT ${PROJECT_NAME}Targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+  # Install library configuration files.
+  include(CMakePackageConfigHelpers)
+
+  configure_package_config_file(
+    UngarConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ungar)
+
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${PACKAGE_VERSION}
+    COMPATIBILITY SameMajorVersion)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ungar)
+
+  # Perform installation.
+  install(
+    EXPORT ${PROJECT_NAME}Targets
+    FILE ${PROJECT_NAME}Targets.cmake
+    NAMESPACE ungar::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ungar)
+endif(UNGAR_INSTALL)

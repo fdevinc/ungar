@@ -1,0 +1,82 @@
+include(CMakeFindDependencyMacro)
+
+@PACKAGE_INIT@
+
+# ##############################################################################
+# Core modules.
+# ##############################################################################
+# Eigen.
+find_dependency(Eigen3 3.4.0 REQUIRED NO_MODULE)
+# Hana.
+find_dependency(Hana REQUIRED)
+
+# ##############################################################################
+# Optional modules.
+# ##############################################################################
+if(@UNGAR_ENABLE_LOGGING@)
+  # spdlog.
+  find_dependency(spdlog REQUIRED)
+endif()
+
+if(@UNGAR_ENABLE_AUTODIFF@)
+  # FiniteDiff.
+  find_dependency(FiniteDiff REQUIRED)
+
+  # CppAD.
+  if(NOT EXISTS @CppAD_ROOT@)
+    message(
+      FATAL_ERROR
+        "Ungar installed with CMake variable 'CppAD_ROOT' set to '@CppAD_ROOT@', but the directory does not exist. Please set 'CppAD_ROOT' to a valid prefix path."
+    )
+  endif()
+
+  set(CPPAD_LIB_DIRECTORY @CppAD_ROOT@/lib)
+  set(CPPAD_INCLUDE_DIRECTORY @CppAD_ROOT@/include)
+  find_library(
+    CppAD_LIBRARY cppad_lib
+    PATHS ${CPPAD_LIB_DIRECTORY} REQUIRED
+    NO_DEFAULT_PATH)
+  find_path(
+    CppAD_INCLUDE_DIR cppad/cppad.hpp
+    PATHS ${CPPAD_INCLUDE_DIRECTORY} REQUIRED
+    NO_DEFAULT_PATH)
+
+  add_library(CppAD SHARED IMPORTED GLOBAL)
+  add_library(CppAD::CppAD ALIAS CppAD)
+  target_include_directories(CppAD INTERFACE ${CppAD_INCLUDE_DIR})
+
+  get_filename_component(CppAD_LIBRARY_NAME ${CppAD_LIBRARY} NAME)
+  get_filename_component(CppAD_LIBRARY_REAL_PATH ${CppAD_LIBRARY} REALPATH)
+
+  set_target_properties(CppAD PROPERTIES IMPORTED_SONAME ${CppAD_LIBRARY_NAME})
+  set_target_properties(CppAD PROPERTIES IMPORTED_LOCATION
+                                         ${CppAD_LIBRARY_REAL_PATH})
+
+  # CppADCodeGen.
+  if(NOT EXISTS @CppADCodeGen_ROOT@)
+    message(
+      FATAL_ERROR
+        "Ungar installed with CMake variable 'CppADCodeGen_ROOT' set to '@CppADCodeGen_ROOT@', but the directory does not exist. Please set 'CppADCodeGen_ROOT' to a valid prefix path."
+    )
+  endif()
+  set(CPPADCODEGEN_INCLUDE_DIRECTORY @CppADCodeGen_ROOT@/include)
+  find_path(
+    CppADCodeGen_INCLUDE_DIR cppad/cg.hpp
+    PATHS ${CPPADCODEGEN_INCLUDE_DIRECTORY} REQUIRED
+    NO_DEFAULT_PATH)
+
+  add_library(CppADCodeGen INTERFACE IMPORTED GLOBAL)
+  add_library(CppADCodeGen::CppADCodeGen ALIAS CppADCodeGen)
+  target_include_directories(CppADCodeGen INTERFACE ${CppADCodeGen_INCLUDE_DIR})
+endif()
+
+if(@UNGAR_ENABLE_OPTIMIZATION@)
+  # Abseil.
+  find_dependency(absl REQUIRED)
+  # OSQP.
+  find_dependency(osqp REQUIRED)
+  # osqp-cpp.
+  find_dependency(osqp-cpp REQUIRED)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")

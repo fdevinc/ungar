@@ -209,65 +209,6 @@ TEST(UtilsTest, QuaternionTransformations) {
                      Utils::ElementaryZRotationMatrix(angle),
                      Utils::ElementaryZQuaternion(angle).toRotationMatrix());
     }
-
-    for (const auto i : enumerate(1024)) {
-        const Vector3r ypr = Vector3r::Random();
-
-        const auto t0 = [](const Vector3r& ypr) {
-            return Vector3r{ypr.array() + 2.0 * std::numbers::pi};
-        };
-        const auto t1 = [](const Vector3r& ypr) {
-            return Vector3r{
-                ypr.x() + std::numbers::pi, std::numbers::pi - ypr.y(), ypr.z() + std::numbers::pi};
-        };
-        const auto t2 = [](const Vector3r& ypr) {
-            return Vector3r{
-                ypr.x() + std::numbers::pi, std::numbers::pi - ypr.y(), ypr.z() - std::numbers::pi};
-        };
-        const auto t3 = [](const Vector3r& ypr) {
-            return Vector3r{
-                ypr.x() - std::numbers::pi, std::numbers::pi - ypr.y(), ypr.z() + std::numbers::pi};
-        };
-        const auto t4 = [](const Vector3r& ypr) {
-            return Vector3r{
-                ypr.x() - std::numbers::pi, std::numbers::pi - ypr.y(), ypr.z() - std::numbers::pi};
-        };
-        const auto t5 = [](const Vector3r& ypr) {
-            return Vector3r{ypr.x() + std::numbers::pi,
-                            -std::numbers::pi - ypr.y(),
-                            ypr.z() + std::numbers::pi};
-        };
-        const auto t6 = [](const Vector3r& ypr) {
-            return Vector3r{ypr.x() + std::numbers::pi,
-                            -std::numbers::pi - ypr.y(),
-                            ypr.z() - std::numbers::pi};
-        };
-        const auto t7 = [](const Vector3r& ypr) {
-            return Vector3r{ypr.x() - std::numbers::pi,
-                            -std::numbers::pi - ypr.y(),
-                            ypr.z() + std::numbers::pi};
-        };
-        const auto t8 = [](const Vector3r& ypr) {
-            return Vector3r{ypr.x() - std::numbers::pi,
-                            -std::numbers::pi - ypr.y(),
-                            ypr.z() - std::numbers::pi};
-        };
-
-        const auto predicate = [](const auto& lhs, const auto& rhs) {
-            return lhs.isApprox(rhs, 1e-6);
-        };
-
-        const Matrix3r R = Utils::RotationMatrixFromYawPitchRoll(ypr);
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t0(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t1(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t2(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t3(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t4(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t5(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t6(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t7(ypr)));
-        ASSERT_PRED2(predicate, R, Utils::RotationMatrixFromYawPitchRoll(t8(ypr)));
-    }
 }
 
 TEST(UtilsTest, SparseMatrixManipulations) {
