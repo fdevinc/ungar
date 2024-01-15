@@ -116,13 +116,15 @@ make the creation of optimal control problems as straightforward as possible.
 ## Citing Ungar
 If you are using Ungar for your work, we encourage you to cite the [related paper](https://arxiv.org/abs/2309.06783):
 ```
-@inproceedings{ungar23,
-  title={{U}ngar -- {A} {C}++ Framework for Real-Time Optimal Control Using Template Metaprogramming}, 
+@INPROCEEDINGS{10341365,
   author={De Vincenti, Flavio and Coros, Stelian},
   booktitle={2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={Ungar - A C++ Framework for Real-Time Optimal Control Using Template Metaprogramming}, 
   year={2023},
-  organization={IEEE},
-}
+  volume={},
+  number={},
+  pages={6297-6303},
+  doi={10.1109/IROS55552.2023.10341365}}
 ```
 
 ## License
