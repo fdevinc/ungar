@@ -82,8 +82,7 @@ class BacktrackingLineSearch {
                           const Eigen::MatrixBase<_SearchDirection>& dw,
                           const Concepts::CostFunction<_W> auto& costFunction,
                           const Concepts::ConstraintViolation<_W> auto& constraintViolation,
-                          Eigen::MatrixBase<_W> const& w,
-                          const bool verbose = false) const {
+                          Eigen::MatrixBase<_W> const& w) const {
         UNGAR_ASSERT(costFunctionGradient.cols() == 1_idx);
         UNGAR_ASSERT(dw.cols() == 1_idx);
         UNGAR_ASSERT(costFunctionGradient.rows() == dw.rows());

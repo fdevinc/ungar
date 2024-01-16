@@ -137,10 +137,10 @@ endif()
 if(UNGAR_INSTALL)
   include(GNUInstallDirs)
 
-  # Install library headers.
+  # Install Ungar headers.
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # Install library binaries.
+  # Install Ungar binaries.
   install(
     TARGETS ungar
     EXPORT ${PROJECT_NAME}Targets
@@ -150,7 +150,7 @@ if(UNGAR_INSTALL)
     INCLUDES
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # Install library configuration files.
+  # Install Ungar configuration files.
   include(CMakePackageConfigHelpers)
 
   configure_package_config_file(
