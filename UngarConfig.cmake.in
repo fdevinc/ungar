@@ -23,23 +23,8 @@ if(@UNGAR_ENABLE_AUTODIFF@)
   find_dependency(FiniteDiff REQUIRED)
 
   # CppAD.
-  if(NOT EXISTS @CppAD_ROOT@)
-    message(
-      FATAL_ERROR
-        "Ungar installed with CMake variable 'CppAD_ROOT' set to '@CppAD_ROOT@', but the directory does not exist. Please set 'CppAD_ROOT' to a valid prefix path."
-    )
-  endif()
-
-  set(CPPAD_LIB_DIRECTORY @CppAD_ROOT@/lib)
-  set(CPPAD_INCLUDE_DIRECTORY @CppAD_ROOT@/include)
-  find_library(
-    CppAD_LIBRARY cppad_lib
-    PATHS ${CPPAD_LIB_DIRECTORY} REQUIRED
-    NO_DEFAULT_PATH)
-  find_path(
-    CppAD_INCLUDE_DIR cppad/cppad.hpp
-    PATHS ${CPPAD_INCLUDE_DIRECTORY} REQUIRED
-    NO_DEFAULT_PATH)
+  find_library(CppAD_LIBRARY cppad_lib REQUIRED)
+  find_path(CppAD_INCLUDE_DIR cppad/cppad.hpp REQUIRED)
 
   add_library(CppAD SHARED IMPORTED GLOBAL)
   add_library(CppAD::CppAD ALIAS CppAD)
@@ -53,17 +38,7 @@ if(@UNGAR_ENABLE_AUTODIFF@)
                                          ${CppAD_LIBRARY_REAL_PATH})
 
   # CppADCodeGen.
-  if(NOT EXISTS @CppADCodeGen_ROOT@)
-    message(
-      FATAL_ERROR
-        "Ungar installed with CMake variable 'CppADCodeGen_ROOT' set to '@CppADCodeGen_ROOT@', but the directory does not exist. Please set 'CppADCodeGen_ROOT' to a valid prefix path."
-    )
-  endif()
-  set(CPPADCODEGEN_INCLUDE_DIRECTORY @CppADCodeGen_ROOT@/include)
-  find_path(
-    CppADCodeGen_INCLUDE_DIR cppad/cg.hpp
-    PATHS ${CPPADCODEGEN_INCLUDE_DIRECTORY} REQUIRED
-    NO_DEFAULT_PATH)
+  find_path(CppADCodeGen_INCLUDE_DIR cppad/cg.hpp REQUIRED)
 
   add_library(CppADCodeGen INTERFACE IMPORTED GLOBAL)
   add_library(CppADCodeGen::CppADCodeGen ALIAS CppADCodeGen)

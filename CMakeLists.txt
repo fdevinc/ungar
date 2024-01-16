@@ -135,23 +135,6 @@ if(UNGAR_BUILD_EXAMPLES)
 endif()
 
 if(UNGAR_INSTALL)
-  if(UNGAR_ENABLE_AUTODIFF)
-    if(NOT DEFINED CppAD_ROOT)
-      message(
-        STATUS
-          "To install Ungar, the prefix path of 'CppAD' must be provided as a CMake variable named 'CppAD_ROOT'. Using default value: '/usr/local'."
-      )
-      set(CppAD_ROOT /usr/local)
-    endif()
-    if(NOT DEFINED CppADCodeGen_ROOT)
-      message(
-        STATUS
-          "To install Ungar, the prefix path of 'CppADCodeGen' must be provided as a CMake variable named 'CppADCodeGen_ROOT'. Using default value: '/usr/local'."
-      )
-      set(CppADCodeGen_ROOT /usr/local)
-    endif()
-  endif(UNGAR_ENABLE_AUTODIFF)
-
   include(GNUInstallDirs)
 
   # Install library headers.

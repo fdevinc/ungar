@@ -208,7 +208,8 @@ if(UNGAR_ENABLE_LOGGING)
     find_package(spdlog REQUIRED)
   endif()
   set_target_properties(spdlog::spdlog PROPERTIES IMPORTED_GLOBAL TRUE)
-  set_target_properties(spdlog::spdlog_header_only PROPERTIES IMPORTED_GLOBAL TRUE)
+  set_target_properties(spdlog::spdlog_header_only PROPERTIES IMPORTED_GLOBAL
+                                                              TRUE)
 
   if(DEFINED SPDLOG_ROOT_DIRECTORY)
     message(STATUS "spdlog found at '${SPDLOG_ROOT_DIRECTORY}'.")
@@ -267,8 +268,8 @@ if(UNGAR_ENABLE_AUTODIFF)
       PATHS ${CPPAD_INCLUDE_DIRECTORY} REQUIRED
       NO_DEFAULT_PATH)
   else()
-    # This line is bound to fail unless a helper CMake script is provided.
-    find_package(CppAD REQUIRED)
+    find_library(CppAD_LIBRARY cppad_lib REQUIRED)
+    find_path(CppAD_INCLUDE_DIR cppad/cppad.hpp REQUIRED)
   endif()
 
   if(DEFINED CPPAD_ROOT_DIRECTORY)
@@ -308,8 +309,7 @@ if(UNGAR_ENABLE_AUTODIFF)
       PATHS ${CPPADCODEGEN_INCLUDE_DIRECTORY} REQUIRED
       NO_DEFAULT_PATH)
   else()
-    # This line is bound to fail unless a helper CMake script is provided.
-    find_package(CppADCodeGen REQUIRED)
+    find_path(CppADCodeGen_INCLUDE_DIR cppad/cg.hpp REQUIRED)
   endif()
 
   if(DEFINED CPPADCODEGEN_ROOT_DIRECTORY)
