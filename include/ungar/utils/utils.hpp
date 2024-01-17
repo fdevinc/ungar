@@ -35,7 +35,7 @@
 #include "ungar/data_types.hpp"
 
 #ifdef UNGAR_CONFIG_ENABLE_AUTODIFF
-#include "ungar/autodiff/data_types.hpp"
+#include "ungar/autodiff/support/quaternion.hpp"
 #endif
 
 namespace Ungar {
@@ -314,7 +314,7 @@ namespace Concepts {
 
 template <typename _ComposableVector>
 concept ComposableVector = Ungar::Concepts::DenseMatrixExpression<_ComposableVector> ||
-                           Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
+    Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
 
 }  // namespace Concepts
 
@@ -437,9 +437,7 @@ class ComposeImpl {
         return composedVector;
     }
 
-    auto ToDynamic()
-        requires ALL_FIXED_SIZES
-    {
+    auto ToDynamic() requires ALL_FIXED_SIZES {
         VectorX<ScalarType> composedVector{COMPOSED_VECTOR_SIZE};
         In(composedVector);
         return composedVector;
@@ -761,6 +759,60 @@ inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<const Quaterni
 template <Concepts::Scalar _Scalar>
 inline Quaternion<_Scalar> UnitQuaternionInverse(const Eigen::Map<Quaternion<_Scalar>>& q) {
     return q.conjugate();
+}
+
+/**
+ * @brief Compute the inverse of a 3x3 invertible matrix.
+ */
+template <typename _Matrix>  // clang-format off
+requires (_Matrix::RowsAtCompileTime == 3 || _Matrix::RowsAtCompileTime == Eigen::Dynamic) &&
+         (_Matrix::ColsAtCompileTime == 3 || _Matrix::ColsAtCompileTime == Eigen::Dynamic)
+inline Matrix3< typename _Matrix::Scalar> Inverse3(const Eigen::MatrixBase<_Matrix>& m) {  // clang-format on
+    using ScalarType = typename _Matrix::Scalar;
+    if constexpr (_Matrix::RowsAtCompileTime == Eigen::Dynamic ||
+                  _Matrix::ColsAtCompileTime == Eigen::Dynamic) {
+        UNGAR_ASSERT(m.rows() == 3_idx && m.cols() == 3_idx);
+    }
+
+    const ScalarType determinant = m.determinant();
+    Matrix3<ScalarType> mInverse;
+    mInverse << (m(1, 1) * m(2, 2) - m(1, 2) * m(2, 1)), -(m(0, 1) * m(2, 2) - m(0, 2) * m(2, 1)),
+        (m(0, 1) * m(1, 2) - m(0, 2) * m(1, 1)), -(m(1, 0) * m(2, 2) - m(1, 2) * m(2, 0)),
+        (m(0, 0) * m(2, 2) - m(0, 2) * m(2, 0)), -(m(0, 0) * m(1, 2) - m(0, 2) * m(1, 0)),
+        (m(1, 0) * m(2, 1) - m(1, 1) * m(2, 0)), -(m(0, 0) * m(2, 1) - m(0, 1) * m(2, 0)),
+        (m(0, 0) * m(1, 1) - m(0, 1) * m(1, 0));
+    mInverse /= determinant;
+    return mInverse;
+}
+
+/**
+ * @brief Compute the inverse of a 6x6 upper triangular block matrix.
+ *
+ * The input matrix has the form:
+ *      [A B]
+ *      [0 C],
+ * where A and C are 3x3 invertible matrices.
+ */
+template <typename _Matrix>  // clang-format off
+requires (_Matrix::RowsAtCompileTime == 6 || _Matrix::RowsAtCompileTime == Eigen::Dynamic) &&
+         (_Matrix::ColsAtCompileTime == 6 || _Matrix::ColsAtCompileTime == Eigen::Dynamic)
+inline Eigen::Matrix<typename _Matrix::Scalar, 6, 6> Inverse6(const Eigen::MatrixBase<_Matrix>& m) {  // clang-format on
+    using ScalarType = typename _Matrix::Scalar;
+    if constexpr (_Matrix::RowsAtCompileTime == Eigen::Dynamic ||
+                  _Matrix::ColsAtCompileTime == Eigen::Dynamic) {
+        UNGAR_ASSERT(m.rows() == 6_idx && m.cols() == 6_idx);
+    }
+    if constexpr (std::same_as<ScalarType, real_t>) {
+        UNGAR_ASSERT((m.template bottomLeftCorner<3, 3>().isZero()));
+    }
+
+    const Matrix3<ScalarType> aInverse = Inverse3(m.derived().template topLeftCorner<3, 3>());
+    const Matrix3<ScalarType> cInverse = Inverse3(m.derived().template bottomRightCorner<3, 3>());
+
+    Eigen::Matrix<ScalarType, 6, 6> mInverse;
+    mInverse << aInverse, -aInverse * m.template topRightCorner<3, 3>() * cInverse,
+        Matrix3<ScalarType>::Zero(), cInverse;
+    return mInverse;
 }
 
 template <Concepts::Scalar _Base, typename _Exponent>

@@ -211,6 +211,27 @@ TEST(UtilsTest, QuaternionTransformations) {
     }
 }
 
+TEST(UtilsTest, MatrixTransformations) {
+    using namespace Ungar;
+
+    std::mt19937 gen{0U};
+    for (const auto i : enumerate(1024)) {
+        const Matrix3r R3 = Matrix3r::Random();
+        const Eigen::Matrix<real_t, 6, 6> R6{(Eigen::Matrix<real_t, 6, 6>{} << Matrix3r::Random(),
+                                              Matrix3r::Random(),
+                                              Matrix3r::Zero(),
+                                              Matrix3r::Random())
+                                                 .finished()};
+
+        const auto predicate = [](const auto& lhs, const auto& rhs) {
+            return lhs.isApprox(rhs, 1e-6);
+        };
+        ASSERT_PRED2(predicate, R3 * Utils::Inverse3(R3), Matrix3r::Identity());
+        ASSERT_PRED2(
+            predicate, R6 * Utils::Inverse6(R6), (Eigen::Matrix<real_t, 6, 6>::Identity()));
+    }
+}
+
 TEST(UtilsTest, SparseMatrixManipulations) {
     using namespace Ungar;
 
