@@ -4,6 +4,10 @@ project(ExternalGoogleTest NONE)
 
 include(ExternalProject)
 
+if(NOT @GTest_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "GoogleTest additional CMake flags: @GTest_CMAKE_FLAGS@")
+endif()
+
 ExternalProject_Add(
   googletest-v1.14.0
   URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
@@ -11,5 +15,6 @@ ExternalProject_Add(
     SHA256=1f357c27ca988c3f7c6b4bf68a9395005ac6761f034046e9dde0896e3aba00e4
   CMAKE_CACHE_ARGS
     -DBUILD_GMOCK:BOOL=OFF
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/googletest/install
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/googletest/install
+    @GTest_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)

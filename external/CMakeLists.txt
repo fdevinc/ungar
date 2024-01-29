@@ -8,22 +8,21 @@ function(download_external_project external_project_config_file
   # Create external project 'CMakeLists.txt' file inside the build folder.
   configure_file(
     ${external_project_config_file}
-    "${CMAKE_BINARY_DIR}/external/${external_project_name}/CMakeLists.txt"
-    @ONLY)
+    "${CMAKE_CURRENT_BINARY_DIR}/${external_project_name}/CMakeLists.txt" @ONLY)
 
   # Create external project build directory 'ep-build'.
   file(MAKE_DIRECTORY
-       ${CMAKE_BINARY_DIR}/external/${external_project_name}/ep-build)
+       ${CMAKE_CURRENT_BINARY_DIR}/${external_project_name}/ep-build)
 
   # Build external project.
   execute_process(
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" ..
     WORKING_DIRECTORY
-      ${CMAKE_BINARY_DIR}/external/${external_project_name}/ep-build)
+      ${CMAKE_CURRENT_BINARY_DIR}/${external_project_name}/ep-build)
   execute_process(
     COMMAND ${CMAKE_COMMAND} --build .
     WORKING_DIRECTORY
-      ${CMAKE_BINARY_DIR}/external/${external_project_name}/ep-build)
+      ${CMAKE_CURRENT_BINARY_DIR}/${external_project_name}/ep-build)
 endfunction()
 
 # ##############################################################################
@@ -36,7 +35,7 @@ elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_BUNDLED_EIGEN ON)
   set(BUNDLED_EIGEN_FILENAME
       ${CMAKE_CURRENT_LIST_DIR}/config/eigen/eigen-3.4.0.zip)
-  set(EIGEN3_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/eigen/install)
+  set(EIGEN3_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/eigen/install)
 endif()
 
 # Hana.
@@ -46,7 +45,7 @@ elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_BUNDLED_HANA ON)
   set(BUNDLED_HANA_FILENAME
       ${CMAKE_CURRENT_LIST_DIR}/config/hana/hana-boost-1.84.0.zip)
-  set(HANA_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/hana/install)
+  set(HANA_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hana/install)
 endif()
 
 # GoogleTest.
@@ -54,7 +53,7 @@ if(DEFINED GTest_ROOT)
   set(GTEST_ROOT_DIRECTORY ${GTest_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_GOOGLETEST ON)
-  set(GTEST_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest/install)
+  set(GTEST_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest/install)
 endif()
 
 # spdlog.
@@ -62,7 +61,7 @@ if(DEFINED spdlog_ROOT)
   set(SPDLOG_ROOT_DIRECTORY ${spdlog_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_SPDLOG ON)
-  set(SPDLOG_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/spdlog/install)
+  set(SPDLOG_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/spdlog/install)
 endif()
 
 # FiniteDiff.
@@ -70,8 +69,7 @@ if(DEFINED FiniteDiff_ROOT)
   set(FINITEDIFF_ROOT_DIRECTORY ${FiniteDiff_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_FINITEDIFF ON)
-  set(FINITEDIFF_ROOT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/external/finite-diff/install)
+  set(FINITEDIFF_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/finite-diff/install)
 endif()
 
 # Abseil.
@@ -79,7 +77,7 @@ if(DEFINED absl_ROOT)
   set(ABSL_ROOT_DIRECTORY ${absl_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_ABSEIL ON)
-  set(ABSL_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/abseil-cpp/install)
+  set(ABSL_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/abseil-cpp/install)
 endif()
 
 # OSQP.
@@ -87,7 +85,7 @@ if(DEFINED osqp_ROOT)
   set(OSQP_ROOT_DIRECTORY ${osqp_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_OSQP ON)
-  set(OSQP_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/osqp/install)
+  set(OSQP_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/osqp/install)
 endif()
 
 # osqp-cpp.
@@ -95,7 +93,7 @@ if(DEFINED osqp-cpp_ROOT)
   set(OSQP_CPP_ROOT_DIRECTORY ${osqp-cpp_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_OSQPCPP ON)
-  set(OSQP_CPP_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/osqp-cpp/install)
+  set(OSQP_CPP_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/osqp-cpp/install)
 endif()
 
 # CppAD.
@@ -103,7 +101,7 @@ if(DEFINED CppAD_ROOT)
   set(CPPAD_ROOT_DIRECTORY ${CppAD_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_CPPAD ON)
-  set(CPPAD_ROOT_DIRECTORY ${CMAKE_BINARY_DIR}/external/CppAD/install)
+  set(CPPAD_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CppAD/install)
 endif()
 
 # CppADCodeGen.
@@ -112,7 +110,7 @@ if(DEFINED CppADCodeGen_ROOT)
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(USE_DOWNLOADED_CPPADCODEGEN ON)
   set(CPPADCODEGEN_ROOT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/external/CppADCodeGen/install)
+      ${CMAKE_CURRENT_BINARY_DIR}/CppADCodeGen/install)
 endif()
 
 # ===========================================================================

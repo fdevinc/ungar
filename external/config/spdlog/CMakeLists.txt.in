@@ -4,12 +4,17 @@ project(ExternalSpdLog NONE)
 
 include(ExternalProject)
 
+if(NOT @spdlog_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "spdlog additional CMake flags: @spdlog_CMAKE_FLAGS@")
+endif()
+
 ExternalProject_Add(
   spdlog-v1.9.2
   URL https://github.com/gabime/spdlog/archive/refs/tags/v1.9.2.zip
   URL_HASH
     SHA256=130bd593c33e2e2abba095b551db6a05f5e4a5a19c03ab31256c38fa218aa0a6
   CMAKE_CACHE_ARGS
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/spdlog/install
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/spdlog/install
     -DSPDLOG_BUILD_SHARED:BOOL=OFF -DSPDLOG_BUILD_ALL:BOOL=OFF
+    @spdlog_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)

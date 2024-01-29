@@ -4,6 +4,10 @@ project(ExternalOSQP NONE)
 
 include(ExternalProject)
 
+if(NOT @osqp_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "OSQP additional CMake flags: @osqp_CMAKE_FLAGS@")
+endif()
+
 # OSQP integrates QLDL as a Git submodule, so it is convenient to download it
 # using Git rather than using the URL method.
 ExternalProject_Add(
@@ -13,5 +17,6 @@ ExternalProject_Add(
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   CMAKE_CACHE_ARGS
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/osqp/install
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/osqp/install
+    @osqp_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)

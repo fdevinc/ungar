@@ -4,15 +4,20 @@ project(ExternalOSQPCpp NONE)
 
 include(ExternalProject)
 
+if(NOT @osqp-cpp_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "osqp-cpp additional CMake flags: @osqp-cpp_CMAKE_FLAGS@")
+endif()
+
 ExternalProject_Add(
   osqp-cpp-v0.5.1-ungar
   URL https://github.com/fdevinc/osqp-cpp/archive/refs/tags/v0.5.1-ungar.zip
   URL_HASH
     SHA256=7d46a394ebdd1532c0eeaa4e3f798600ef9fbc2de4f4325d513289d92563150a
   CMAKE_CACHE_ARGS
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/osqp-cpp/install
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/osqp-cpp/install
     -DOSQP_CPP_INSTALL:BOOL=ON
     -Dabsl_ROOT:STRING=@ABSL_ROOT_DIRECTORY@
     -DEigen3_ROOT:STRING=@EIGEN3_ROOT_DIRECTORY@
     -Dosqp_ROOT:STRING=@OSQP_ROOT_DIRECTORY@
+    @osqp-cpp_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)

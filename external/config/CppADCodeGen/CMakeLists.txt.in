@@ -4,6 +4,11 @@ project(ExternalCppADCodeGen NONE)
 
 include(ExternalProject)
 
+if(NOT @CppADCodeGen_CMAKE_FLAGS@ STREQUAL "")
+  message(
+    STATUS "CppADCodeGen additional CMake flags: @CppADCodeGen_CMAKE_FLAGS@")
+endif()
+
 ExternalProject_Add(
   CppADCodeGen-v2.4.3
   URL https://github.com/fdevinc/CppADCodeGen/archive/refs/tags/v2.4.3-ungar.zip
@@ -11,6 +16,7 @@ ExternalProject_Add(
     SHA256=63adcd082b6de959763460797619dcdef92353498b8ccdf0a312ae0a91dd1d3a
   CMAKE_CACHE_ARGS
     -DCPPAD_HOME:STRING=@CPPAD_ROOT_DIRECTORY@/include
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/CppADCodeGen/install
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/CppADCodeGen/install
     -DCPPADCODEGEN_BUILD_TESTS:BOOL=OFF
+    @CppADCodeGen_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)

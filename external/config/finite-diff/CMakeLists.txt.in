@@ -4,14 +4,17 @@ project(ExternalFiniteDiff NONE)
 
 include(ExternalProject)
 
+if(NOT @FiniteDiff_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "FiniteDiff additional CMake flags: @FiniteDiff_CMAKE_FLAGS@")
+endif()
+
 ExternalProject_Add(
   finite-diff-v1.0.2-ungar
   URL https://github.com/fdevinc/finite-diff/archive/refs/tags/v1.0.2-ungar.zip
   URL_HASH
     SHA256=9583bc34ab446d2313ded912fc791b7ad39e853d27f29dc78438bd3223cd2a85
   CMAKE_CACHE_ARGS
-    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_BINARY_DIR@/external/finite-diff/install
-    -DFINITE_DIFF_INSTALL:BOOL=ON
-    -DEigen3_ROOT:STRING=@EIGEN3_ROOT_DIRECTORY@
-    -Dspdlog_ROOT:STRING=@SPDLOG_ROOT_DIRECTORY@
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/finite-diff/install
+    -DFINITE_DIFF_INSTALL:BOOL=ON -DEigen3_ROOT:STRING=@EIGEN3_ROOT_DIRECTORY@
+    -Dspdlog_ROOT:STRING=@SPDLOG_ROOT_DIRECTORY@ @FiniteDiff_CMAKE_FLAGS@
   UPDATE_DISCONNECTED 1)
