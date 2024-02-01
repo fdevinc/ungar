@@ -314,7 +314,7 @@ namespace Concepts {
 
 template <typename _ComposableVector>
 concept ComposableVector = Ungar::Concepts::DenseMatrixExpression<_ComposableVector> ||
-    Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
+                           Ungar::Concepts::Scalar<std::remove_cvref_t<_ComposableVector>>;
 
 }  // namespace Concepts
 
@@ -437,7 +437,9 @@ class ComposeImpl {
         return composedVector;
     }
 
-    auto ToDynamic() requires ALL_FIXED_SIZES {
+    auto ToDynamic()
+        requires ALL_FIXED_SIZES
+    {
         VectorX<ScalarType> composedVector{COMPOSED_VECTOR_SIZE};
         In(composedVector);
         return composedVector;
@@ -1013,8 +1015,9 @@ inline _Scalar Abs(const _Scalar& a) {
 }
 
 template <Concepts::Scalar _Scalar>
-inline _Scalar SmoothAbs(const _Scalar& a) {
-    return Utils::Sqrt(Utils::Pow(a, 2) + Eigen::NumTraits<_Scalar>::epsilon());
+inline _Scalar SmoothAbs(const _Scalar& a,
+                         const _Scalar& epsilon = Eigen::NumTraits<_Scalar>::epsilon()) {
+    return Utils::Sqrt(Utils::Pow(a, 2) + epsilon);
 }
 
 template <typename _Matrix>  // clang-format off
