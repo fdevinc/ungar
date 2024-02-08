@@ -50,7 +50,9 @@ int main() {
     UNGAR_VARIABLE(u) <<= force;                        // u := f
     UNGAR_VARIABLE(X) <<= (N + 1_c) * x;                // X := [x0 x1 ... xN]
     UNGAR_VARIABLE(U) <<= N * u;                        // U := [u0 u1 ... uN-1]
-    UNGAR_VARIABLE(XRef) <<= (N + 1_c) * x;             // XRef := [xRef0 xRef1 ... xRefN]
+
+    UNGAR_VARIABLE(xRef) <<= (position, linear_velocity);  // xRef := [p pDot]
+    UNGAR_VARIABLE(XRef) <<= (N + 1_c) * xRef;             // XRef := [xRef0 xRef1 ... xRefN]
 
     UNGAR_VARIABLE(decision_variables) <<= (X, U);
     UNGAR_VARIABLE(parameters) <<= (mass, XRef, state_cost_weight, input_cost_weight);
@@ -70,11 +72,11 @@ int main() {
             y = VectorXr::Zero(1);
             for (auto k : enumerate(N)) {
                 y[0] += vars.Get(state_cost_weight) *
-                            (vars.Get(X, x, k) - vars.Get(XRef, x, k)).squaredNorm() +
-                        vars.Get(input_cost_weight) * vars.Get(U, u, k).squaredNorm();
+                            (vars.Get(x, k) - vars.Get(xRef, k)).squaredNorm() +
+                        vars.Get(input_cost_weight) * vars.Get(u, k).squaredNorm();
             }
-            y[0] += vars.Get(state_cost_weight) *
-                    (vars.Get(X, x, N) - vars.Get(XRef, x, N)).squaredNorm();
+            y[0] +=
+                vars.Get(state_cost_weight) * (vars.Get(x, N) - vars.Get(xRef, N)).squaredNorm();
         },
         decision_variables.Size(),
         parameters.Size(),
