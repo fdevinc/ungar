@@ -114,7 +114,7 @@ class Function {  // clang-format on
             _jacobianInnerStarts.emplace_back(0);
             for (int i = 0; const int j : enumerate(static_cast<int>(_dependentVariableSize))) {
                 if (i < static_cast<int>(_nnzJacobian)) {
-                    while (i < _nnzJacobian && rows[i] == j) {
+                    while (i < static_cast<int>(_nnzJacobian) && rows[i] == j) {
                         ++i;
                     }
                     _jacobianInnerStarts.emplace_back(i);
@@ -408,7 +408,7 @@ class FunctionFactory {
 
             UNGAR_LOG(info,
                       "Removing internal model folder {}...",
-                      _internalLibrary.parent_path().parent_path());
+                      _internalLibrary.parent_path().parent_path().c_str());
             std::filesystem::remove_all(_internalLibrary.parent_path().parent_path());
 
             UNGAR_LOG(info, "Success.");
@@ -492,18 +492,18 @@ class FunctionFactory {
                 libraryCSourceGen, (tmpLibrary.parent_path() / tmpLibrary.stem()).string()};
             SetCompilerOptions(library.parent_path(), gccCompiler);
 
-            UNGAR_LOG(info, "Compiling shared library {}...", tmpLibrary);
+            UNGAR_LOG(info, "Compiling shared library {}...", tmpLibrary.c_str());
             _dynamicLib = libraryProcessor.createDynamicLibrary(gccCompiler);
             _model      = _dynamicLib->model(modelName);
             UNGAR_ASSERT(_dynamicLib);
             UNGAR_ASSERT(_model);
 
-            UNGAR_LOG(info, "Renaming {} to {}...", tmpLibrary, library);
+            UNGAR_LOG(info, "Renaming {} to {}...", tmpLibrary.c_str(), library.c_str());
             std::filesystem::rename(tmpLibrary, library);
         }
 
         void LoadModel() {
-            UNGAR_LOG(info, "Loading shared library {}...", _library);
+            UNGAR_LOG(info, "Loading shared library {}...", _library.c_str());
 
             _dynamicLib.reset(new CppAD::cg::LinuxDynamicLib<real_t>(_library));
             _model = _dynamicLib->model(_blueprint.name);
