@@ -63,7 +63,7 @@ class SoftSQPOptimizer {
         VectorXr xpHelper = xp;
         _cache.xp         = xp;
 
-        for (const auto i : enumerate(_maxIterations)) {
+        for ([[maybe_unused]] const auto i : enumerate(_maxIterations)) {
             if (_osqpSettings.verbose) {
                 UNGAR_LOG(trace, "Starting soft SQP iteration {}...", i);
             }
