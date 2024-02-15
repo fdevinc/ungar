@@ -107,6 +107,26 @@ class SoftSQPOptimizer {
         return _cache.xp.head(nlpProblem.objective.IndependentVariableSize());
     }
 
+    Autodiff::Function MakeSoftInequalityConstraintFunction(
+        const Concepts::NLPProblem auto& nlpProblem) const {
+        auto Zsoft = [&](const VectorXad& variables, VectorXad& Zsoft) -> void {
+            Zsoft.resize(1_idx);
+            Zsoft << SoftInequalityConstraint{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
+                -variables);
+        };
+
+        std::string softIneqModelName = Utils::ToSnakeCase(
+            "soft_sqp_soft_ineq_sz_"s +
+            std::to_string(nlpProblem.inequalityConstraints.DependentVariableSize()) + "_k_" +
+            std::to_string(_stiffness) + "_eps_" + std::to_string(_epsilon));
+        return Autodiff::MakeFunction({Zsoft,
+                                       nlpProblem.inequalityConstraints.DependentVariableSize(),
+                                       0_idx,
+                                       softIneqModelName,
+                                       EnabledDerivatives::ALL},
+                                      false);
+    }
+
   private:
     template <typename _XP>  // clang-format off
     requires std::same_as<typename _XP::Scalar, real_t> 
@@ -201,26 +221,6 @@ class SoftSQPOptimizer {
             /// @todo Manage all different exit codes.
             UNGAR_ASSERT(exitCode == osqp::OsqpExitCode::kOptimal);
         }
-    }
-
-    Autodiff::Function MakeSoftInequalityConstraintFunction(
-        const Concepts::NLPProblem auto& nlpProblem) const {
-        auto Zsoft = [&](const VectorXad& variables, VectorXad& Zsoft) -> void {
-            Zsoft.resize(1_idx);
-            Zsoft << SoftInequalityConstraint{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
-                -variables);
-        };
-
-        std::string softIneqModelName = Utils::ToSnakeCase(
-            "soft_sqp_soft_ineq_sz_"s +
-            std::to_string(nlpProblem.inequalityConstraints.DependentVariableSize()) + "_k_" +
-            std::to_string(_stiffness) + "_eps_" + std::to_string(_epsilon));
-        return Autodiff::MakeFunction({Zsoft,
-                                       nlpProblem.inequalityConstraints.DependentVariableSize(),
-                                       0_idx,
-                                       softIneqModelName,
-                                       EnabledDerivatives::ALL},
-                                      false);
     }
 
     template <typename _XP>  // clang-format off
