@@ -37,18 +37,22 @@
 
 namespace Ungar {
 
+enum class RelaxedBarrierType { LOG, POLY };
+
 class SoftSQPOptimizer {
   public:
     SoftSQPOptimizer(const bool verbose,
-                     const defaulted<1.0> constraintViolationMultiplier = {},
-                     const defaulted<10_idx> maxIterations              = {},
-                     const defaulted<100.0> stiffness                   = {},
-                     const defaulted<2e-5> epsilon                      = {},
-                     const defaulted<false> polish                      = {})
+                     const defaulted<1.0> constraintViolationMultiplier           = {},
+                     const defaulted<10_idx> maxIterations                        = {},
+                     const defaulted<100.0> stiffness                             = {},
+                     const defaulted<2e-5> epsilon                                = {},
+                     const defaulted<RelaxedBarrierType::POLY> relaxedBarrierType = {},
+                     const defaulted<false> polish                                = {})
         : _constraintViolationMultiplier{constraintViolationMultiplier},
           _maxIterations{maxIterations},
           _stiffness{stiffness},
-          _epsilon{epsilon} {
+          _epsilon{epsilon},
+          _relaxedBarrierType{relaxedBarrierType} {
         _osqpSettings.verbose = verbose;
         _osqpSettings.polish  = polish;
     }
@@ -111,12 +115,18 @@ class SoftSQPOptimizer {
         const Concepts::NLPProblem auto& nlpProblem) const {
         auto Zsoft = [&](const VectorXad& variables, VectorXad& Zsoft) -> void {
             Zsoft.resize(1_idx);
-            Zsoft << SoftInequalityConstraint{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
-                -variables);
+            if (_relaxedBarrierType == RelaxedBarrierType::LOG) {
+                Zsoft << RelaxedLogBarrierFunction{0.0, _stiffness, _epsilon}.Evaluate<ad_scalar_t>(
+                    -variables);
+            } else {
+                Zsoft << RelaxedPolyBarrierFunction{0.0, _stiffness, _epsilon}
+                             .Evaluate<ad_scalar_t>(-variables);
+            }
         };
 
         std::string softIneqModelName = Utils::ToSnakeCase(
-            "soft_sqp_soft_ineq_sz_"s +
+            "soft_sqp_relaxed_"s +
+            (_relaxedBarrierType == RelaxedBarrierType::LOG ? "log_" : "poly_") + "_sz_" +
             std::to_string(nlpProblem.inequalityConstraints.DependentVariableSize()) + "_k_" +
             std::to_string(_stiffness) + "_eps_" + std::to_string(_epsilon));
         return Autodiff::MakeFunction({Zsoft,
@@ -266,6 +276,7 @@ class SoftSQPOptimizer {
 
     real_t _stiffness;
     real_t _epsilon;
+    RelaxedBarrierType _relaxedBarrierType;
     std::unique_ptr<Autodiff::Function> _softInequalityCnstrs;
 };
 

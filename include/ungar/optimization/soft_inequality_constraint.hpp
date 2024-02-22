@@ -27,7 +27,7 @@
 #ifndef _UNGAR__OPTIMIZATION__SOFT_INEQUALITY_CONSTRAINT_HPP_
 #define _UNGAR__OPTIMIZATION__SOFT_INEQUALITY_CONSTRAINT_HPP_
 
-#include "ungar/data_types.hpp"
+#include "ungar/utils/utils.hpp"
 
 namespace Ungar {
 
@@ -67,12 +67,72 @@ class LogisticFunction {
 /**
  * @brief Implement soft inequality constraints of the form 'lhs >= rhs'.
  *
+ * @details This implementation is adapted from [1].
+ *
+ * @see [1] Ruben Grandia, Farbod Farshidian, René Ranftl and Marco Hutter.
+ *          "Feedback MPC for Torque-Controlled Legged Robots." 2019 IEEE/RSJ
+ *          International Conference on Intelligent Robots and Systems (IROS)
+ *          (2019): 4730-4737.
  */
-class SoftInequalityConstraint {
+class RelaxedLogBarrierFunction {
   public:
-    constexpr SoftInequalityConstraint(const real_t rhs,
-                                       const real_t stiffness = 1.0,
-                                       const real_t epsilon   = 2e-5)
+    constexpr RelaxedLogBarrierFunction(const real_t rhs,
+                                        const real_t stiffness = 1e-5,
+                                        const real_t epsilon   = 5.0)
+        : _rhs{rhs}, _epsilon{epsilon}, _mu{stiffness} {
+    }
+
+    template <Ungar::Concepts::Scalar _Scalar>
+    _Scalar Evaluate(const _Scalar& lhs) const {
+        return EvaluateImpl(lhs - _rhs);
+    }
+
+    template <Ungar::Concepts::Scalar _Scalar>
+    _Scalar Evaluate(const RefToConstVectorX<_Scalar>& lhs) const {
+        return (lhs.array() - _rhs)
+            .unaryExpr([this](const auto& coeff) -> _Scalar { return EvaluateImpl(coeff); })
+            .sum();
+    }
+
+  private:
+    real_t EvaluateImpl(const real_t& x) const {
+        if (x >= _epsilon) {
+            return -_mu * std::log(x);
+        } else {
+            return _mu / 2.0 * (Utils::Pow((x - 2.0 * _epsilon) / _epsilon, 2) - 1.0) -
+                   _mu * std::log(_epsilon);
+        }
+    }
+
+    ad_scalar_t EvaluateImpl(const ad_scalar_t& x) const {
+        return CppAD::CondExpGe(
+            x,
+            ad_scalar_t{_epsilon},
+            -_mu * CppAD::log(x),
+            ad_scalar_t{_mu / 2.0} *
+                    (Utils::Pow((x - ad_scalar_t{2.0 * _epsilon}) / ad_scalar_t{_epsilon}, 2) -
+                     ad_scalar_t{1.0}) -
+                ad_scalar_t{_mu * std::log(_epsilon)});
+    }
+
+    real_t _rhs, _epsilon;
+    real_t _mu;
+};
+
+/**
+ * @brief Implement soft inequality constraints of the form 'lhs >= rhs'.
+ *
+ * @details This implementation is adapted from [2].
+ *
+ * @see [2] James M. Bern, Kai-Hung Chang and Stelian Coros. “Interactive
+ *          design of animated plushies.” ACM Transactions on Graphics (TOG)
+ *          36 (2017): 1 - 11.
+ */
+class RelaxedPolyBarrierFunction {
+  public:
+    constexpr RelaxedPolyBarrierFunction(const real_t rhs,
+                                         const real_t stiffness = 1.0,
+                                         const real_t epsilon   = 2e-5)
         : _rhs{rhs},
           _epsilon{epsilon},
           _a1{stiffness},
@@ -169,8 +229,8 @@ class SoftBoundConstraint {
 
   private:
     real_t _epsilon;
-    SoftInequalityConstraint _lowerBound;
-    SoftInequalityConstraint _upperBound;
+    RelaxedPolyBarrierFunction _lowerBound;
+    RelaxedPolyBarrierFunction _upperBound;
 };
 
 }  // namespace Ungar
