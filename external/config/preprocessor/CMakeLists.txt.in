@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(ExternalPreprocessor NONE)
+
+include(ExternalProject)
+
+if(NOT @Preprocessor_CMAKE_FLAGS@ STREQUAL "")
+  message(
+    STATUS "Preprocessor additional CMake flags: @Preprocessor_CMAKE_FLAGS@")
+endif()
+
+ExternalProject_Add(
+  preprocessor-1.84.0-ungar
+  URL @BUNDLED_PREPROCESSOR_FILENAME@
+  URL_HASH
+    SHA256=6c5a4bf474c1ee5355d426a0a890d96186361eb66b73666bb09dc4062270435f
+  CMAKE_CACHE_ARGS
+    -DCMAKE_CXX_STANDARD:STRING=20
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/preprocessor/install
+    -DBUILD_TESTING:BOOL=OFF
+    -DBOOST_PREPROCESSOR_INSTALL:BOOL=ON
+    @Preprocessor_CMAKE_FLAGS@
+  UPDATE_DISCONNECTED 1
+  DOWNLOAD_EXTRACT_TIMESTAMP 1)

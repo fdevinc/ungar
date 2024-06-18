@@ -48,6 +48,18 @@ elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(HANA_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hana/install)
 endif()
 
+# Preprocessor.
+if(DEFINED Preprocessor_ROOT)
+  set(PREPROCESSOR_ROOT_DIRECTORY ${Preprocessor_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_BUNDLED_PREPROCESSOR ON)
+  set(BUNDLED_PREPROCESSOR_FILENAME
+      ${CMAKE_CURRENT_LIST_DIR}/config/preprocessor/preprocessor-1.84.0-ungar.zip
+  )
+  set(PREPROCESSOR_ROOT_DIRECTORY
+      ${CMAKE_CURRENT_BINARY_DIR}/preprocessor/install)
+endif()
+
 # GoogleTest.
 if(DEFINED GTest_ROOT)
   set(GTEST_ROOT_DIRECTORY ${GTest_ROOT})
@@ -159,6 +171,28 @@ if(DEFINED HANA_ROOT_DIRECTORY)
   message(STATUS "Hana found at '${HANA_ROOT_DIRECTORY}'.")
 else()
   message(STATUS "Hana found.")
+endif()
+
+# ##############################################################################
+# Add Preprocessor.
+# ##############################################################################
+message(STATUS "--------------------------------------------------")
+if(USE_BUNDLED_PREPROCESSOR)
+  message(STATUS "Using bundled Preprocessor...")
+  download_external_project(config/preprocessor/CMakeLists.txt.in preprocessor)
+  find_package(
+    Preprocessor REQUIRED PATHS
+    ${PREPROCESSOR_ROOT_DIRECTORY}/lib/cmake/preprocessor NO_DEFAULT_PATH)
+else()
+  message(STATUS "Using system-wide Preprocessor...")
+  find_package(Preprocessor REQUIRED)
+endif()
+set_target_properties(Boost::preprocessor PROPERTIES IMPORTED_GLOBAL TRUE)
+
+if(DEFINED PREPROCESSOR_ROOT_DIRECTORY)
+  message(STATUS "Preprocessor found at '${PREPROCESSOR_ROOT_DIRECTORY}'.")
+else()
+  message(STATUS "Preprocessor found.")
 endif()
 
 # ===========================================================================

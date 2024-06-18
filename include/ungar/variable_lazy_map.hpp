@@ -43,8 +43,8 @@ namespace Ungar {
  * @tparam _EnableMutableMembers Boolean integral constant indicating whether mutable members are
  *                               enabled or not.
  *
- * @warning The size of the underlying data must be identical to the size of the variable being.
- *          mapped. Incorrect type mapping may lead to unexpected behavior or runtime errors.
+ * @warning The size of the underlying data must be identical to the size of the variable being
+ *          mapped. Incorrect size mapping may lead to unexpected behavior or runtime errors.
  */
 template <typename _Scalar, Concepts::Variable _Variable, Concepts::HanaBool _EnableMutableMembers>
 class VariableLazyMap {
@@ -124,9 +124,8 @@ class VariableLazyMap {
      *          must be 0. Otherwise, calling this constructor results in an assertion failure.
      */
     template <typename _Underlying>
-    constexpr VariableLazyMap(const _Underlying& underlying, const _Variable& var)
-        requires(UnderlyingSize(hana::type_c<_Underlying>) ==
-                 static_cast<size_t>(_Variable::Size()))
+    constexpr VariableLazyMap(const _Underlying& underlying, const _Variable& var) requires(
+        UnderlyingSize(hana::type_c<_Underlying>) == static_cast<size_t>(_Variable::Size()))
         : _data{std::ranges::data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
@@ -147,9 +146,8 @@ class VariableLazyMap {
      *          must be 0. Otherwise, calling this constructor results in an assertion failure.
      */
     template <typename _Underlying>
-    constexpr VariableLazyMap(_Underlying& underlying, const _Variable& var)
-        requires(UnderlyingSize(hana::type_c<_Underlying>) ==
-                 static_cast<size_t>(_Variable::Size()))
+    constexpr VariableLazyMap(_Underlying& underlying, const _Variable& var) requires(
+        UnderlyingSize(hana::type_c<_Underlying>) == static_cast<size_t>(_Variable::Size()))
         : _data{std::ranges::data(underlying)}, _variable{var} {
         UNGAR_ASSERT(!var.Index());
     }
@@ -180,9 +178,7 @@ class VariableLazyMap {
      *
      * @see VariableLazyMap::Get.
      */
-    decltype(auto) Get()
-        requires _EnableMutableMembers::value
-    {
+    decltype(auto) Get() requires _EnableMutableMembers::value {
         return Get1(_variable);
     }
 
@@ -212,9 +208,7 @@ class VariableLazyMap {
      *
      * @see VariableLazyMap::Get.
      */
-    decltype(auto) Get(auto&&... args)
-        requires _EnableMutableMembers::value
-    {
+    decltype(auto) Get(auto&&... args) requires _EnableMutableMembers::value {
         return Get1(_variable(std::forward<decltype(args)>(args)...));
     }
 
@@ -245,9 +239,7 @@ class VariableLazyMap {
      *
      * @see VariableLazyMap::Get.
      */
-    decltype(auto) GetTuple(auto&&... vars)
-        requires _EnableMutableMembers::value
-    {
+    decltype(auto) GetTuple(auto&&... vars) requires _EnableMutableMembers::value {
         return std::tuple<decltype(Get(std::forward<decltype(vars)>(vars)))...>(
             Get(std::forward<decltype(vars)>(vars))...);
     }
@@ -296,9 +288,7 @@ class VariableLazyMap {
         }
     }
 
-    auto GetImpl(const Concepts::Variable auto& var)
-        requires _EnableMutableMembers::value
-    {
+    auto GetImpl(const Concepts::Variable auto& var) requires _EnableMutableMembers::value {
         using VariableType = std::remove_cvref_t<decltype(var)>;
         if constexpr (VariableType::IsQuaternion()) {
             return Eigen::Map<Quaternion<_Scalar>>{const_cast<_Scalar*>(_data) + var.Index()};

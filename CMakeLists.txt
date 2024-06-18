@@ -80,7 +80,7 @@ endif()
 list(APPEND UNGAR_INCLUDE_DIRECTORIES
      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
      $<INSTALL_INTERFACE:include>)
-list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen hana)
+list(APPEND UNGAR_LINK_LIBRARIES Eigen3::Eigen hana Boost::preprocessor)
 
 # Optional modules.
 if(UNGAR_ENABLE_LOGGING)
