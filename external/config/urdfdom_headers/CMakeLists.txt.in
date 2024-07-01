@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(ExternalURDFDomHeaders NONE)
+
+include(ExternalProject)
+
+if(NOT @urdfdom_headers_CMAKE_FLAGS@ STREQUAL "")
+  message(
+    STATUS
+      "urdfdom_headers additional CMake flags: @urdfdom_headers_CMAKE_FLAGS@")
+endif()
+
+ExternalProject_Add(
+  urdfdom_headers-1.1.1
+  URL https://github.com/ros/urdfdom_headers/archive/refs/tags/1.1.1.zip
+  URL_HASH
+    SHA256=dde77e3dd96ffa41e2ee0a20bddcd6ef05863e95ce0143ede77130d8cd46c644
+  CMAKE_CACHE_ARGS
+    -DCMAKE_CXX_STANDARD:STRING=20
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/urdfdom_headers/install
+    @urdfdom_headers_CMAKE_FLAGS@
+  UPDATE_DISCONNECTED 1
+  DOWNLOAD_EXTRACT_TIMESTAMP 1)

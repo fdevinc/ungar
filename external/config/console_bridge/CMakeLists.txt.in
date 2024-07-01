@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(ExternalConsoleBridge NONE)
+
+include(ExternalProject)
+
+if(NOT @console_bridge_CMAKE_FLAGS@ STREQUAL "")
+  message(
+    STATUS "console_bridge additional CMake flags: @console_bridge_CMAKE_FLAGS@"
+  )
+endif()
+
+ExternalProject_Add(
+  console_bridge-1.0.2-ungar
+  URL https://github.com/fdevinc/console_bridge/archive/refs/tags/1.0.2-ungar.zip
+  URL_HASH
+    SHA256=0fadd85047247953a64f7dc01f00f0da683aaab556fed7ec704d0a910e623b8e
+  CMAKE_CACHE_ARGS
+    -DCMAKE_CXX_STANDARD:STRING=20
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/console_bridge/install
+    @console_bridge_CMAKE_FLAGS@
+  UPDATE_DISCONNECTED 1
+  DOWNLOAD_EXTRACT_TIMESTAMP 1)

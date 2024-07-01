@@ -20,6 +20,9 @@ option(UNGAR_BUILD_EXAMPLES "Add targets showing Ungar's features." OFF)
 option(UNGAR_INSTALL "Install CMake targets during install step." OFF)
 option(UNGAR_ENABLE_OPTIMIZATION
        "Enable Ungar's nonlinear programming interface." OFF)
+option(UNGAR_ENABLE_PINOCCHIO
+       "Enable Ungar's interface to Pinocchio's rigid body dynamics algorithms."
+       OFF)
 cmake_dependent_option(
   UNGAR_ENABLE_LOGGING
   "Enable Ungar's logging functionalities. Automatically enabled if any of the flags 'UNGAR_ENABLE_AUTODIFF', 'UNGAR_ENABLE_OPTIMIZATION', and 'UNGAR_BUILD_EXAMPLES' is set to 'ON'."
@@ -40,6 +43,7 @@ message(STATUS "Configuring Ungar with the following options:")
 message(STATUS "    Enable logging         : ${UNGAR_ENABLE_LOGGING}")
 message(STATUS "    Enable autodiff        : ${UNGAR_ENABLE_AUTODIFF}")
 message(STATUS "    Enable optimization    : ${UNGAR_ENABLE_OPTIMIZATION}")
+message(STATUS "    Enable Pinocchio       : ${UNGAR_ENABLE_PINOCCHIO}")
 message(STATUS "    Build examples         : ${UNGAR_BUILD_EXAMPLES}")
 message(STATUS "    Build tests            : ${UNGAR_BUILD_TESTS}")
 message(STATUS "    Install                : ${UNGAR_INSTALL}")
@@ -92,6 +96,9 @@ if(UNGAR_ENABLE_AUTODIFF)
 endif()
 if(UNGAR_ENABLE_OPTIMIZATION)
   list(APPEND UNGAR_LINK_LIBRARIES osqp-cpp::osqp-cpp)
+endif()
+if(UNGAR_ENABLE_PINOCCHIO)
+  list(APPEND UNGAR_LINK_LIBRARIES pinocchio::pinocchio Boost::boost)
 endif()
 
 target_include_directories(ungar INTERFACE ${UNGAR_INCLUDE_DIRECTORIES})

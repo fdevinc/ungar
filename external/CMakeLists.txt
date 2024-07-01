@@ -84,6 +84,23 @@ elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
   set(FINITEDIFF_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/finite-diff/install)
 endif()
 
+# CppAD.
+if(DEFINED CppAD_ROOT)
+  set(CPPAD_ROOT_DIRECTORY ${CppAD_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_CPPAD ON)
+  set(CPPAD_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CppAD/install)
+endif()
+
+# CppADCodeGen.
+if(DEFINED CppADCodeGen_ROOT)
+  set(CPPADCODEGEN_ROOT_DIRECTORY ${CppADCodeGen_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_CPPADCODEGEN ON)
+  set(CPPADCODEGEN_ROOT_DIRECTORY
+      ${CMAKE_CURRENT_BINARY_DIR}/CppADCodeGen/install)
+endif()
+
 # Abseil.
 if(DEFINED absl_ROOT)
   set(ABSL_ROOT_DIRECTORY ${absl_ROOT})
@@ -104,25 +121,58 @@ endif()
 if(DEFINED osqp-cpp_ROOT)
   set(OSQP_CPP_ROOT_DIRECTORY ${osqp-cpp_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
-  set(USE_DOWNLOADED_OSQPCPP ON)
+  set(USE_DOWNLOADED_OSQP_CPP ON)
   set(OSQP_CPP_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/osqp-cpp/install)
 endif()
 
-# CppAD.
-if(DEFINED CppAD_ROOT)
-  set(CPPAD_ROOT_DIRECTORY ${CppAD_ROOT})
+# Boost.
+if(DEFINED Boost_ROOT)
+  set(BOOST_ROOT_DIRECTORY ${Boost_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
-  set(USE_DOWNLOADED_CPPAD ON)
-  set(CPPAD_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/CppAD/install)
+  set(USE_DOWNLOADED_BOOST ON)
+  set(BOOST_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/boost/install)
 endif()
 
-# CppADCodeGen.
-if(DEFINED CppADCodeGen_ROOT)
-  set(CPPADCODEGEN_ROOT_DIRECTORY ${CppADCodeGen_ROOT})
+# urdfdom_headers.
+if(DEFINED urdfdom_headers_ROOT)
+  set(URDFDOM_HEADERS_ROOT_DIRECTORY ${urdfdom_headers_ROOT})
 elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
-  set(USE_DOWNLOADED_CPPADCODEGEN ON)
-  set(CPPADCODEGEN_ROOT_DIRECTORY
-      ${CMAKE_CURRENT_BINARY_DIR}/CppADCodeGen/install)
+  set(USE_DOWNLOADED_URDFDOM_HEADERS ON)
+  set(URDFDOM_HEADERS_ROOT_DIRECTORY
+      ${CMAKE_CURRENT_BINARY_DIR}/urdfdom_headers/install)
+endif()
+
+# console_bridge.
+if(DEFINED console_bridge_ROOT)
+  set(CONSOLE_BRIDGE_ROOT_DIRECTORY ${console_bridge_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_CONSOLE_BRIDGE ON)
+  set(CONSOLE_BRIDGE_ROOT_DIRECTORY
+      ${CMAKE_CURRENT_BINARY_DIR}/console_bridge/install)
+endif()
+
+# TinyXML2.
+if(DEFINED TinyXML2_ROOT)
+  set(TINYXML2_ROOT_DIRECTORY ${TinyXML2_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_TINYXML2 ON)
+  set(TINYXML2_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tinyxml2/install)
+endif()
+
+# urdfdom.
+if(DEFINED urdfdom_ROOT)
+  set(URDFDOM_ROOT_DIRECTORY ${urdfdom_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_URDFDOM ON)
+  set(URDFDOM_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/urdfdom/install)
+endif()
+
+# Pinocchio.
+if(DEFINED pinocchio_ROOT)
+  set(PINOCCHIO_ROOT_DIRECTORY ${pinocchio_ROOT})
+elseif(NOT UNGAR_USE_SYSTEM_LIBRARIES)
+  set(USE_DOWNLOADED_PINOCCHIO ON)
+  set(PINOCCHIO_ROOT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pinocchio/install)
 endif()
 
 # ===========================================================================
@@ -138,7 +188,7 @@ if(USE_BUNDLED_EIGEN)
                ${EIGEN3_ROOT_DIRECTORY}/share/eigen3/cmake NO_DEFAULT_PATH)
 else()
   message(STATUS "Using system-wide Eigen...")
-  find_package(Eigen3 3.4.0 REQUIRED NO_MODULE)
+  find_package(Eigen3 3.4.0 REQUIRED CONFIG)
 endif()
 set_target_properties(Eigen3::Eigen PROPERTIES IMPORTED_GLOBAL TRUE)
 
@@ -404,7 +454,7 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   # Add osqp-cpp.
   # ############################################################################
   message(STATUS "--------------------------------------------------")
-  if(USE_DOWNLOADED_OSQPCPP)
+  if(USE_DOWNLOADED_OSQP_CPP)
     message(STATUS "Using locally downloaded osqp-cpp...")
     download_external_project(config/osqp-cpp/CMakeLists.txt.in osqp-cpp)
     find_package(osqp-cpp REQUIRED PATHS
@@ -422,3 +472,155 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   endif()
 
 endif(UNGAR_ENABLE_OPTIMIZATION)
+
+# ===========================================================================
+# 5) PINOCCHIO
+if(UNGAR_ENABLE_PINOCCHIO)
+  # ############################################################################
+  # Add Boost.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_BOOST)
+    message(STATUS "Using locally downloaded Boost...")
+    download_external_project(config/boost/CMakeLists.txt.in boost)
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_USE_STATIC_RUNTIME ON)
+    find_package(Boost REQUIRED PATHS
+                 ${BOOST_ROOT_DIRECTORY}/lib/cmake/Boost-1.84.0 NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide Boost...")
+    find_package(Boost 1.77.0 REQUIRED)
+  endif()
+  set_target_properties(Boost::boost PROPERTIES IMPORTED_GLOBAL TRUE)
+
+  if(DEFINED BOOST_ROOT_DIRECTORY)
+    message(STATUS "Boost found at '${BOOST_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "Boost found.")
+  endif()
+
+  # ############################################################################
+  # Add urdfdom_headers.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_URDFDOM_HEADERS)
+    message(STATUS "Using locally downloaded urdfdom_headers...")
+    download_external_project(config/urdfdom_headers/CMakeLists.txt.in
+                              urdfdom_headers)
+    find_package(
+      urdfdom_headers REQUIRED PATHS
+      ${URDFDOM_HEADERS_ROOT_DIRECTORY}/lib/urdfdom_headers/cmake
+      NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide urdfdom_headers...")
+    find_package(urdfdom_headers REQUIRED)
+  endif()
+
+  if(DEFINED URDFDOM_HEADERS_ROOT_DIRECTORY)
+    message(
+      STATUS "urdfdom_headers found at '${URDFDOM_HEADERS_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "urdfdom_headers found.")
+  endif()
+
+  # ############################################################################
+  # Add console_bridge.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_CONSOLE_BRIDGE)
+    message(STATUS "Using locally downloaded console_bridge...")
+    download_external_project(config/console_bridge/CMakeLists.txt.in
+                              console_bridge)
+    find_package(
+      console_bridge REQUIRED PATHS
+      ${CONSOLE_BRIDGE_ROOT_DIRECTORY}/lib/console_bridge/cmake NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide console_bridge...")
+    find_package(console_bridge REQUIRED)
+  endif()
+
+  if(DEFINED CONSOLE_BRIDGE_ROOT_DIRECTORY)
+    message(
+      STATUS "console_bridge found at '${CONSOLE_BRIDGE_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "console_bridge found.")
+  endif()
+
+  # ############################################################################
+  # Add TinyXML2.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_TINYXML2)
+    message(STATUS "Using locally downloaded TinyXML2...")
+    download_external_project(config/tinyxml2/CMakeLists.txt.in tinyxml2)
+    find_package(TinyXML2 REQUIRED PATHS
+                 ${TINYXML2_ROOT_DIRECTORY}/lib/cmake/tinyxml2 NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide TinyXML2...")
+    find_package(TinyXML2 REQUIRED)
+  endif()
+
+  if(DEFINED TINYXML2_ROOT_DIRECTORY)
+    message(STATUS "TinyXML2 found at '${TINYXML2_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "TinyXML2 found.")
+  endif()
+
+  # ############################################################################
+  # Add urdfdom.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_URDFDOM)
+    message(STATUS "Using locally downloaded urdfdom...")
+    download_external_project(config/urdfdom/CMakeLists.txt.in urdfdom)
+
+    # Set preferred paths for urdfdom's dependency.
+    set(urdfdom_headers_ROOT ${URDFDOM_HEADERS_ROOT_DIRECTORY})
+
+    find_package(urdfdom REQUIRED PATHS
+                 ${URDFDOM_ROOT_DIRECTORY}/lib/urdfdom/cmake NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide urdfdom...")
+    find_package(urdfdom REQUIRED)
+  endif()
+
+  if(DEFINED URDFDOM_ROOT_DIRECTORY)
+    message(STATUS "urdfdom found at '${URDFDOM_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "urdfdom found.")
+  endif()
+
+  # ############################################################################
+  # Add Pinocchio.
+  # ############################################################################
+  message(STATUS "--------------------------------------------------")
+  if(USE_DOWNLOADED_PINOCCHIO)
+    message(STATUS "Using locally downloaded Pinocchio...")
+    download_external_project(config/pinocchio/CMakeLists.txt.in pinocchio)
+
+    # Set C++ standard and preferred paths for Pinocchio's dependencies.
+    set(CMAKE_CXX_STANDARD 20)
+    set(Boost_NO_WARN_NEW_VERSIONS ON)
+
+    set(Boost_ROOT ${BOOST_ROOT_DIRECTORY})
+    set(Eigen3_ROOT ${EIGEN3_ROOT_DIRECTORY})
+    set(console_bridge_ROOT ${CONSOLE_BRIDGE_ROOT_DIRECTORY})
+    set(urdfdom_headers_ROOT ${URDFDOM_HEADERS_ROOT_DIRECTORY})
+    set(urdfdom_ROOT ${URDFDOM_ROOT_DIRECTORY})
+
+    find_package(
+      pinocchio REQUIRED PATHS ${PINOCCHIO_ROOT_DIRECTORY}/lib/cmake/pinocchio
+      NO_DEFAULT_PATH)
+  else()
+    message(STATUS "Using system-wide Pinocchio...")
+    find_package(pinocchio REQUIRED)
+  endif()
+  set_target_properties(pinocchio::pinocchio PROPERTIES IMPORTED_GLOBAL TRUE)
+
+  if(DEFINED PINOCCHIO_ROOT_DIRECTORY)
+    message(STATUS "Pinocchio found at '${PINOCCHIO_ROOT_DIRECTORY}'.")
+  else()
+    message(STATUS "Pinocchio found.")
+  endif()
+
+endif(UNGAR_ENABLE_PINOCCHIO)

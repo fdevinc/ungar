@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(ExternalTinyXML2 NONE)
+
+include(ExternalProject)
+
+if(NOT @TinyXML2_CMAKE_FLAGS@ STREQUAL "")
+  message(STATUS "TinyXML2 additional CMake flags: @TinyXML2_CMAKE_FLAGS@")
+endif()
+
+ExternalProject_Add(
+  tinyxml2-10.0.0
+  URL https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.zip
+  URL_HASH
+    SHA256=6c60b185d3570d37196d5bde17ca4f63b44a9936b515450db75ac8de5e560910
+  CMAKE_CACHE_ARGS
+    -DCMAKE_CXX_STANDARD:STRING=20 -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
+    -DCMAKE_INSTALL_PREFIX:STRING=@CMAKE_CURRENT_BINARY_DIR@/tinyxml2/install
+    -DBUILD_SHARED_LIBS:BOOL=OFF @TinyXML2_CMAKE_FLAGS@
+  UPDATE_DISCONNECTED 1
+  DOWNLOAD_EXTRACT_TIMESTAMP 1)
