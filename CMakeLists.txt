@@ -129,6 +129,11 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   target_compile_definitions(ungar INTERFACE -DUNGAR_CONFIG_ENABLE_OPTIMIZATION)
 endif()
 
+if(UNGAR_ENABLE_PINOCCHIO)
+  target_compile_definitions(
+    ungar INTERFACE "UNGAR_DATA_FOLDER=\"${CMAKE_CURRENT_SOURCE_DIR}/data\"")
+endif()
+
 # ##############################################################################
 # Add optional targets.
 # ##############################################################################
