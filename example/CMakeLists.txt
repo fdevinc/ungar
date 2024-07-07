@@ -20,6 +20,14 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   target_link_libraries(ungar.rc_car.example ungar::ungar)
 endif()
 
+if(UNGAR_ENABLE_PINOCCHIO)
+  add_executable(ungar.quantity.example rbd/quantity.example.cpp)
+  target_link_libraries(ungar.quantity.example ungar::ungar)
+
+  add_executable(ungar.robot.example rbd/robot.example.cpp)
+  target_link_libraries(ungar.robot.example ungar::ungar)
+endif()
+
 # Add examples to the test targets if testing is enabled.
 if(UNGAR_BUILD_TESTS)
   add_test(NAME ungar.variable.example COMMAND ungar.variable.example)
@@ -33,5 +41,10 @@ if(UNGAR_BUILD_TESTS)
     add_test(NAME ungar.quadrotor.example COMMAND ungar.quadrotor.example)
     add_test(NAME ungar.quadruped.example COMMAND ungar.quadruped.example)
     add_test(NAME ungar.rc_car.example COMMAND ungar.rc_car.example)
+  endif()
+
+  if(UNGAR_ENABLE_PINOCCHIO)
+    add_test(NAME ungar.quantity.example COMMAND ungar.quantity.example)
+    add_test(NAME ungar.robot.example COMMAND ungar.robot.example)
   endif()
 endif()
