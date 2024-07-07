@@ -9,6 +9,8 @@ include(CMakeFindDependencyMacro)
 find_dependency(Eigen3 3.4.0 REQUIRED NO_MODULE)
 # Hana.
 find_dependency(Hana REQUIRED)
+# Preprocessor.
+find_dependency(Preprocessor REQUIRED)
 
 # ##############################################################################
 # Optional modules.
@@ -52,6 +54,11 @@ if(@UNGAR_ENABLE_OPTIMIZATION@)
   find_dependency(osqp REQUIRED)
   # osqp-cpp.
   find_dependency(osqp-cpp REQUIRED)
+endif()
+
+if(@UNGAR_ENABLE_PINOCCHIO@)
+  # Abseil.
+  find_dependency(pinocchio REQUIRED)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")

@@ -98,7 +98,8 @@ if(UNGAR_ENABLE_OPTIMIZATION)
   list(APPEND UNGAR_LINK_LIBRARIES osqp-cpp::osqp-cpp)
 endif()
 if(UNGAR_ENABLE_PINOCCHIO)
-  list(APPEND UNGAR_LINK_LIBRARIES pinocchio::pinocchio Boost::boost)
+  list(APPEND UNGAR_LINK_LIBRARIES pinocchio::pinocchio Boost::boost
+       "-Wl,--disable-new-dtags")
 endif()
 
 target_include_directories(ungar INTERFACE ${UNGAR_INCLUDE_DIRECTORIES})
@@ -131,7 +132,9 @@ endif()
 
 if(UNGAR_ENABLE_PINOCCHIO)
   target_compile_definitions(
-    ungar INTERFACE "UNGAR_DATA_FOLDER=\"${CMAKE_CURRENT_SOURCE_DIR}/data\"")
+    ungar
+    INTERFACE -DUNGAR_CONFIG_ENABLE_PINOCCHIO
+    INTERFACE "UNGAR_DATA_FOLDER=\"${CMAKE_CURRENT_SOURCE_DIR}/data\"")
 endif()
 
 # ##############################################################################

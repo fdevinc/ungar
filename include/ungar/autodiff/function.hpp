@@ -52,7 +52,7 @@ class Function {  // clang-format on
               parameterSize{parameterSize_},
               dependentVariableSize{[&functionImpl_, independentVariableSize_, parameterSize_]() {
                   VectorXad dependentVariable;
-                  functionImpl_(VectorXad::Ones(independentVariableSize_ + parameterSize_),
+                  functionImpl_(VectorXad::Random(independentVariableSize_ + parameterSize_),
                                 dependentVariable);
                   return dependentVariable.size();
               }()},
@@ -454,7 +454,7 @@ class FunctionFactory {
                               const std::filesystem::path& library,
                               const bool trimInternalModelSparsity) {
             VectorXad xp =
-                VectorXad::Ones(_blueprint.independentVariableSize + _blueprint.parameterSize);
+                VectorXad::Random(_blueprint.independentVariableSize + _blueprint.parameterSize);
             CppAD::Independent(xp);
 
             VectorXad y;
@@ -463,7 +463,7 @@ class FunctionFactory {
             UNGAR_ASSERT(y.size() && y.size() == _blueprint.dependentVariableSize);
 
             ADFun adFun(xp, y);
-            adFun.optimize();
+            adFun.optimize("no_compare_op");
 
             CppAD::cg::ModelCSourceGen<real_t> sourceGen(adFun, modelName);
             if (_blueprint.enabledDerivatives & EnabledDerivatives::JACOBIAN) {
