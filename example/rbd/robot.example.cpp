@@ -129,9 +129,8 @@ int main() {
 
     /***************                  Generate derivatives.                   ***************/
     // Implement autodiff function that computes the centroidal momentum of the robot.
-    UNGAR_LOG(
-        info,
-        "Generating the autodiff function to compute the centroidal momentum of the robot...");
+    UNGAR_LOG(info,
+              "Generating an autodiff function to compute the centroidal momentum of the robot...");
     auto functionImpl = [&](const VectorXad& qvUnderlying, VectorXad& y) -> void {
         Robot<ad_scalar_t> robotAD{urdfFilename};
         const auto qv_ = MakeMVariableLazyMap(qvUnderlying, vs::qv);
@@ -157,8 +156,8 @@ int main() {
     UNGAR_LOG(
         info, "Ground truth:\n{}", robot.Get(qs::centroidal_momentum).toVector_impl().transpose());
     UNGAR_LOG(info,
-              "Autodiff Jacobian (6 rightmost columns):\n{}",
-              function.Jacobian(qv).toDense().rightCols(6_idx));
+              "Autodiff Jacobian (6 leftmost columns):\n{}",
+              function.Jacobian(qv).toDense().leftCols(6_idx));
 
     return 0;
 }
