@@ -114,6 +114,18 @@ constexpr auto make_mvariable_array(index_t index) {
             }                                                                                   \
         }                                                                                       \
                                                                                                 \
+        constexpr const auto& Get(auto _var,                                                    \
+                                  std::convertible_to<::Ungar::index_t> auto _i1,               \
+                                  std::convertible_to<::Ungar::index_t> auto _i2,               \
+                                  std::convertible_to<::Ungar::index_t> auto _i3,               \
+                                  auto... _args) const {                                        \
+            if constexpr (sizeof...(_args)) {                                                   \
+                return GetOpt(_var, _i1, _i2, _i3)->get().Get(_args...);                        \
+            } else {                                                                            \
+                return GetOpt(_var, _i1, _i2, _i3).value().get();                               \
+            }                                                                                   \
+        }                                                                                       \
+                                                                                                \
         constexpr decltype(auto) GetOpt(auto _var) const {                                      \
             if constexpr (std::same_as<decltype(_var), name##_t>) {                             \
                 return ::Ungar::hana::just(std::cref(*this));                                   \
@@ -133,6 +145,13 @@ constexpr auto make_mvariable_array(index_t index) {
             return ::Ungar::hana::nothing;                                                      \
         }                                                                                       \
                                                                                                 \
+        constexpr decltype(auto) GetOpt(auto _var,                                              \
+                                        std::convertible_to<::Ungar::index_t> auto _i1,         \
+                                        std::convertible_to<::Ungar::index_t> auto _i2,         \
+                                        std::convertible_to<::Ungar::index_t> auto _i3) const { \
+            return ::Ungar::hana::nothing;                                                      \
+        }                                                                                       \
+                                                                                                \
         constexpr decltype(auto) GetOpt(auto... _args) const {                                  \
             return ::Ungar::hana::nothing;                                                      \
         }                                                                                       \
@@ -140,102 +159,127 @@ constexpr auto make_mvariable_array(index_t index) {
         static_cast<::Ungar::index_t>(0)                                                        \
     }
 
-#define UNGAR_MVARIABLE_ARRAY(name, var, size)                                                    \
-    inline constexpr struct name##_t {                                                            \
-      private:                                                                                    \
-        static constexpr auto _name  = #name;                                                     \
-        static constexpr auto _size  = static_cast<::Ungar::index_t>(size) * var##_t::Size();     \
-        static constexpr auto _kind  = ::Ungar::MVariableKind::ARRAY;                             \
-        static constexpr auto _space = ::Ungar::MVariableSpace::EUCLIDEAN;                        \
-        ::Ungar::index_t _index;                                                                  \
-        ::std::array<var##_t, static_cast<::std::size_t>(size)> _data;                            \
-                                                                                                  \
-      public:                                                                                     \
-        static constexpr const char* Name() {                                                     \
-            return _name;                                                                         \
-        }                                                                                         \
-                                                                                                  \
-        static constexpr ::Ungar::index_t Size() {                                                \
-            return _size;                                                                         \
-        }                                                                                         \
-                                                                                                  \
-        static constexpr ::Ungar::MVariableSpace Space() {                                        \
-            return _space;                                                                        \
-        }                                                                                         \
-                                                                                                  \
-        constexpr ::Ungar::index_t Index() const {                                                \
-            return _index;                                                                        \
-        }                                                                                         \
-                                                                                                  \
-        constexpr name##_t(const ::Ungar::index_t _index)                                         \
-            : _index{_index},                                                                     \
-              _data{make_mvariable_array<var##_t, static_cast<::std::size_t>(size)>(_index)} {    \
-        }                                                                                         \
-                                                                                                  \
-        constexpr decltype(auto) operator[](std::convertible_to<::Ungar::index_t> auto i) const { \
-            return _data[static_cast<::std::size_t>(i)];                                          \
-        }                                                                                         \
-                                                                                                  \
-        constexpr const auto& Get(auto _var, auto... _args) const {                               \
-            if constexpr (sizeof...(_args)) {                                                     \
-                return GetOpt(_var)->get().Get(_args...);                                         \
-            } else {                                                                              \
-                return GetOpt(_var).value().get();                                                \
-            }                                                                                     \
-        }                                                                                         \
-                                                                                                  \
-        constexpr const auto& Get(auto _var,                                                      \
-                                  std::convertible_to<::Ungar::index_t> auto i,                   \
-                                  auto... _args) const {                                          \
-            if constexpr (sizeof...(_args)) {                                                     \
-                return GetOpt(_var, i)->get().Get(_args...);                                      \
-            } else {                                                                              \
-                return GetOpt(_var, i).value().get();                                             \
-            }                                                                                     \
-        }                                                                                         \
-                                                                                                  \
-        constexpr const auto& Get(auto _var,                                                      \
-                                  std::convertible_to<::Ungar::index_t> auto _i1,                 \
-                                  std::convertible_to<::Ungar::index_t> auto _i2,                 \
-                                  auto... _args) const {                                          \
-            if constexpr (sizeof...(_args)) {                                                     \
-                return GetOpt(_var, _i1, _i2)->get().Get(_args...);                               \
-            } else {                                                                              \
-                return GetOpt(_var, _i1, _i2).value().get();                                      \
-            }                                                                                     \
-        }                                                                                         \
-                                                                                                  \
-        constexpr decltype(auto) GetOpt(auto _var) const {                                        \
-            if constexpr (std::same_as<decltype(_var), name##_t>) {                               \
-                return ::Ungar::hana::just(std::cref(*this));                                     \
-            } else {                                                                              \
-                return ::Ungar::hana::nothing;                                                    \
-            }                                                                                     \
-        }                                                                                         \
-                                                                                                  \
-        constexpr decltype(auto) GetOpt(auto _var,                                                \
-                                        std::convertible_to<::Ungar::index_t> auto _i) const {    \
-            if constexpr (std::same_as<std::remove_cvref_t<decltype(_data.front().GetOpt(_var))>, \
-                                       ::Ungar::hana::optional<>>) {                              \
-                return ::Ungar::hana::nothing;                                                    \
-            } else {                                                                              \
-                return _data[static_cast<::std::size_t>(_i)].GetOpt(_var);                        \
-            }                                                                                     \
-        }                                                                                         \
-                                                                                                  \
-        constexpr decltype(auto) GetOpt(auto _var,                                                \
-                                        std::convertible_to<::Ungar::index_t> auto _i1,           \
-                                        std::convertible_to<::Ungar::index_t> auto _i2) const {   \
-            if constexpr (std::same_as<                                                           \
-                              std::remove_cvref_t<decltype(_data.front().GetOpt(_var, _i2))>,     \
-                              ::Ungar::hana::optional<>>) {                                       \
-                return ::Ungar::hana::nothing;                                                    \
-            } else {                                                                              \
-                return _data[static_cast<::std::size_t>(_i1)].GetOpt(_var, _i2);                  \
-            }                                                                                     \
-        }                                                                                         \
-    } name {                                                                                      \
-        static_cast<::Ungar::index_t>(0)                                                          \
+#define UNGAR_MVARIABLE_ARRAY(name, var, size)                                                     \
+    inline constexpr struct name##_t {                                                             \
+      private:                                                                                     \
+        static constexpr auto _name  = #name;                                                      \
+        static constexpr auto _size  = static_cast<::Ungar::index_t>(size) * var##_t::Size();      \
+        static constexpr auto _kind  = ::Ungar::MVariableKind::ARRAY;                              \
+        static constexpr auto _space = ::Ungar::MVariableSpace::EUCLIDEAN;                         \
+        ::Ungar::index_t _index;                                                                   \
+        ::std::array<var##_t, static_cast<::std::size_t>(size)> _data;                             \
+                                                                                                   \
+      public:                                                                                      \
+        static constexpr const char* Name() {                                                      \
+            return _name;                                                                          \
+        }                                                                                          \
+                                                                                                   \
+        static constexpr ::Ungar::index_t Size() {                                                 \
+            return _size;                                                                          \
+        }                                                                                          \
+                                                                                                   \
+        static constexpr ::Ungar::MVariableSpace Space() {                                         \
+            return _space;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        constexpr ::Ungar::index_t Index() const {                                                 \
+            return _index;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        constexpr name##_t(const ::Ungar::index_t _index)                                          \
+            : _index{_index},                                                                      \
+              _data{make_mvariable_array<var##_t, static_cast<::std::size_t>(size)>(_index)} {     \
+        }                                                                                          \
+                                                                                                   \
+        constexpr decltype(auto) operator[](std::convertible_to<::Ungar::index_t> auto i) const {  \
+            return _data[static_cast<::std::size_t>(i)];                                           \
+        }                                                                                          \
+                                                                                                   \
+        constexpr const auto& Get(auto _var, auto... _args) const {                                \
+            if constexpr (sizeof...(_args)) {                                                      \
+                return GetOpt(_var)->get().Get(_args...);                                          \
+            } else {                                                                               \
+                return GetOpt(_var).value().get();                                                 \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr const auto& Get(auto _var,                                                       \
+                                  std::convertible_to<::Ungar::index_t> auto i,                    \
+                                  auto... _args) const {                                           \
+            if constexpr (sizeof...(_args)) {                                                      \
+                return GetOpt(_var, i)->get().Get(_args...);                                       \
+            } else {                                                                               \
+                return GetOpt(_var, i).value().get();                                              \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr const auto& Get(auto _var,                                                       \
+                                  std::convertible_to<::Ungar::index_t> auto _i1,                  \
+                                  std::convertible_to<::Ungar::index_t> auto _i2,                  \
+                                  auto... _args) const {                                           \
+            if constexpr (sizeof...(_args)) {                                                      \
+                return GetOpt(_var, _i1, _i2)->get().Get(_args...);                                \
+            } else {                                                                               \
+                return GetOpt(_var, _i1, _i2).value().get();                                       \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr const auto& Get(auto _var,                                                       \
+                                  std::convertible_to<::Ungar::index_t> auto _i1,                  \
+                                  std::convertible_to<::Ungar::index_t> auto _i2,                  \
+                                  std::convertible_to<::Ungar::index_t> auto _i3,                  \
+                                  auto... _args) const {                                           \
+            if constexpr (sizeof...(_args)) {                                                      \
+                return GetOpt(_var, _i1, _i2, _i3)->get().Get(_args...);                           \
+            } else {                                                                               \
+                return GetOpt(_var, _i1, _i2, _i3).value().get();                                  \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr decltype(auto) GetOpt(auto _var) const {                                         \
+            if constexpr (std::same_as<decltype(_var), name##_t>) {                                \
+                return ::Ungar::hana::just(std::cref(*this));                                      \
+            } else {                                                                               \
+                return ::Ungar::hana::nothing;                                                     \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr decltype(auto) GetOpt(auto _var,                                                 \
+                                        std::convertible_to<::Ungar::index_t> auto _i) const {     \
+            if constexpr (std::same_as<std::remove_cvref_t<decltype(_data.front().GetOpt(_var))>,  \
+                                       ::Ungar::hana::optional<>>) {                               \
+                return ::Ungar::hana::nothing;                                                     \
+            } else {                                                                               \
+                return _data[static_cast<::std::size_t>(_i)].GetOpt(_var);                         \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr decltype(auto) GetOpt(auto _var,                                                 \
+                                        std::convertible_to<::Ungar::index_t> auto _i1,            \
+                                        std::convertible_to<::Ungar::index_t> auto _i2) const {    \
+            if constexpr (std::same_as<                                                            \
+                              std::remove_cvref_t<decltype(_data.front().GetOpt(_var, _i2))>,      \
+                              ::Ungar::hana::optional<>>) {                                        \
+                return ::Ungar::hana::nothing;                                                     \
+            } else {                                                                               \
+                return _data[static_cast<::std::size_t>(_i1)].GetOpt(_var, _i2);                   \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        constexpr decltype(auto) GetOpt(auto _var,                                                 \
+                                        std::convertible_to<::Ungar::index_t> auto _i1,            \
+                                        std::convertible_to<::Ungar::index_t> auto _i2,            \
+                                        std::convertible_to<::Ungar::index_t> auto _i3) const {    \
+            if constexpr (std::same_as<                                                            \
+                              std::remove_cvref_t<decltype(_data.front().GetOpt(_var, _i2, _i3))>, \
+                              ::Ungar::hana::optional<>>) {                                        \
+                return ::Ungar::hana::nothing;                                                     \
+            } else {                                                                               \
+                return _data[static_cast<::std::size_t>(_i1)].GetOpt(_var, _i2, _i3);              \
+            }                                                                                      \
+        }                                                                                          \
+    } name {                                                                                       \
+        static_cast<::Ungar::index_t>(0)                                                           \
     }
 
 #define _UNGAR_BRANCH_MVARIABLE_HELPER_1_PRED(r, state) \
@@ -249,7 +293,8 @@ constexpr auto make_mvariable_array(index_t index) {
 #define _UNGAR_BRANCH_MVARIABLE_HELPER_3(name) , name.GetOpt(_var)
 #define _UNGAR_BRANCH_MVARIABLE_HELPER_4(name) , name.GetOpt(_var, _i)
 #define _UNGAR_BRANCH_MVARIABLE_HELPER_5(name) , name.GetOpt(_var, _i1, _i2)
-#define _UNGAR_BRANCH_MVARIABLE_HELPER_6(name) name##_t name;
+#define _UNGAR_BRANCH_MVARIABLE_HELPER_6(name) , name.GetOpt(_var, _i1, _i2, _i3)
+#define _UNGAR_BRANCH_MVARIABLE_HELPER_7(name) name##_t name;
 #define UNGAR_BRANCH_MVARIABLE(name, firstSubVariableName, ...)                                   \
     inline constexpr struct name##_t {                                                            \
       private:                                                                                    \
@@ -261,7 +306,7 @@ constexpr auto make_mvariable_array(index_t index) {
         ::Ungar::index_t _index;                                                                  \
                                                                                                   \
       public:                                                                                     \
-        UNGAR_FOR_EACH(_UNGAR_BRANCH_MVARIABLE_HELPER_6, firstSubVariableName, __VA_ARGS__)       \
+        UNGAR_FOR_EACH(_UNGAR_BRANCH_MVARIABLE_HELPER_7, firstSubVariableName, __VA_ARGS__)       \
                                                                                                   \
         constexpr name##_t(const ::Ungar::index_t _index)                                         \
             : _index{_index},                                                                     \
@@ -317,6 +362,18 @@ constexpr auto make_mvariable_array(index_t index) {
             }                                                                                     \
         }                                                                                         \
                                                                                                   \
+        constexpr const auto& Get(auto _var,                                                      \
+                                  std::convertible_to<::Ungar::index_t> auto _i1,                 \
+                                  std::convertible_to<::Ungar::index_t> auto _i2,                 \
+                                  std::convertible_to<::Ungar::index_t> auto _i3,                 \
+                                  auto... _args) const {                                          \
+            if constexpr (sizeof...(_args)) {                                                     \
+                return GetOpt(_var, _i1, _i2, _i3)->get().Get(_args...);                          \
+            } else {                                                                              \
+                return GetOpt(_var, _i1, _i2, _i3).value().get();                                 \
+            }                                                                                     \
+        }                                                                                         \
+                                                                                                  \
         constexpr decltype(auto) GetOpt(auto _var) const {                                        \
             if constexpr (std::same_as<decltype(_var), name##_t>) {                               \
                 return ::Ungar::hana::just(std::cref(*this));                                     \
@@ -347,6 +404,20 @@ constexpr auto make_mvariable_array(index_t index) {
                                         std::convertible_to<::Ungar::index_t> auto _i2) const {   \
             auto candidates = ::Ungar::hana::make_tuple(firstSubVariableName.GetOpt(              \
                 _var, _i1, _i2) UNGAR_FOR_EACH(_UNGAR_BRANCH_MVARIABLE_HELPER_5, __VA_ARGS__));   \
+            static_assert(                                                                        \
+                hana::count_if(candidates, ::Ungar::hana::is_just) <= ::Ungar::hana::size_c<1UL>, \
+                "To prevent ambiguous bypasses, a variable must appear at most once as "          \
+                "a sub-variable.");                                                               \
+            return ::Ungar::hana::flatten(hana::find_if(candidates, ::Ungar::hana::is_just));     \
+        }                                                                                         \
+                                                                                                  \
+        constexpr decltype(auto) GetOpt(auto _var,                                                \
+                                        std::convertible_to<::Ungar::index_t> auto _i1,           \
+                                        std::convertible_to<::Ungar::index_t> auto _i2,           \
+                                        std::convertible_to<::Ungar::index_t> auto _i3) const {   \
+            auto candidates = ::Ungar::hana::make_tuple(                                          \
+                firstSubVariableName.GetOpt(_var, _i1, _i2, _i3)                                  \
+                    UNGAR_FOR_EACH(_UNGAR_BRANCH_MVARIABLE_HELPER_6, __VA_ARGS__));               \
             static_assert(                                                                        \
                 hana::count_if(candidates, ::Ungar::hana::is_just) <= ::Ungar::hana::size_c<1UL>, \
                 "To prevent ambiguous bypasses, a variable must appear at most once as "          \
