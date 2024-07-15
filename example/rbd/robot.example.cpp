@@ -109,8 +109,7 @@ int main() {
     }
 
     UNGAR_LOG(info, "Computing the center of mass acceleration...");
-    auto res = robot.Compute(qs::com_acceleration);
-    res.At(q, v, a);
+    robot.Compute(qs::com_acceleration).At(q, v, a);
     UNGAR_LOG(info, "Done. Center of mass acceleration:\n{}", robot.Get(qs::com_acceleration));
     UNGAR_LOG(info, Utils::DASH_LINE_SEPARATOR);
 
