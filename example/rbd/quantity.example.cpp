@@ -38,12 +38,8 @@ namespace Variables {
 /***************                Define helper m-variables.                ***************/
 inline constexpr auto NUM_LEGS = 4_idx;
 
-inline constexpr auto LF = 0_idx;
-inline constexpr auto LH = 1_idx;
-inline constexpr auto RF = 2_idx;
-inline constexpr auto RH = 3_idx;
-
-inline constexpr auto FOOT_FRAME_IDS = std::array{12UL, 22UL, 32UL, 42UL};
+inline auto FOOT_FRAME_NAMES = std::array{"LF_FOOT"s, "LH_FOOT"s, "RF_FOOT"s, "RH_FOOT"s};
+inline constexpr auto FOOT_FRAME_INDICES = std::array{12_idx, 22_idx, 32_idx, 42_idx};
 
 UNGAR_LEAF_MVARIABLE(position, 3);
 UNGAR_LEAF_MVARIABLE(orientation, Q);
@@ -68,43 +64,103 @@ UNGAR_BRANCH_MVARIABLE(qv, q, v);
 
 }  // namespace Variables
 
+/***************                 Define custom quantity.                  ***************/
+/**
+ * @brief To compute and get a quantity using \c Ungar::Robot, the following steps must be
+ *        followed:
+ *          1) define the quantity;
+ *          2) define a corresponding evaluator;
+ *          3) define a corresponding getter.
+ */
+
+/*======================================================================================*/
+/*~~~~~~~~~~~~~|                     PART I: QUANTITY                     |~~~~~~~~~~~~~*/
+/*======================================================================================*/
+/// @brief Ungar provides a convenient macro to simplify the definition of quantities.
 namespace Quantities {
 
-UNGAR_MAKE_QUANTITY(foot_pose);
+UNGAR_MAKE_QUANTITY(frame_pose);  // Quantity corresponding to the pose of a frame.
 
 }
 }  // namespace ANYmalB
 
+/*======================================================================================*/
+/*~~~~~~~~~~~~~|                    PART II: EVALUATOR                    |~~~~~~~~~~~~~*/
+/*======================================================================================*/
+/// @brief Evaluators wrap Pinocchio's functionalities and provide the user with a
+///        minimal interface.
 namespace Ungar {
 namespace RBD {
 
+/**
+ * @brief Evaluators must implement a (possibly overloaded) function \c At computing
+ *        the desired quantity and returning \c void.
+ */
 template <typename _Scalar>
-struct Evaluator<ANYmalB::Quantities::foot_pose, _Scalar> {
+struct Evaluator<ANYmalB::Quantities::frame_pose, _Scalar> {
     void At(const auto& q) {
-        namespace vs = ANYmalB::Variables;
-
+        // Compute the pose of each joint frame.
         pinocchio::forwardKinematics(model, data, q);
-        for (const auto frameID : vs::FOOT_FRAME_IDS) {
-            pinocchio::updateFramePlacement(model, data, frameID);
-        }
     }
 
     const pinocchio::ModelTpl<_Scalar>& model;
     pinocchio::DataTpl<_Scalar>& data;
 };
 
-template <typename _Scalar>
-struct Getter<ANYmalB::Quantities::foot_pose, _Scalar> {
-    const auto& Get(const index_t foot) const {
-        namespace vs = ANYmalB::Variables;
+}  // namespace RBD
+}  // namespace Ungar
 
-        return data.oMf[vs::FOOT_FRAME_IDS[static_cast<size_t>(foot)]];
+/*======================================================================================*/
+/*~~~~~~~~~~~~~|                     PART III: GETTER                     |~~~~~~~~~~~~~*/
+/*======================================================================================*/
+/// @brief Getters allow the user to easily retrieve desired quantities.
+namespace Ungar {
+namespace RBD {
+
+/**
+ * @brief Getters must implement a (possibly overloaded) function \c Get returning
+ *        the desired quantity.
+ */
+template <typename _Scalar>
+struct Getter<ANYmalB::Quantities::frame_pose, _Scalar> {
+    const auto& Get(const index_t frameIndex) const {
+        UNGAR_ASSERT(static_cast<index_t>(frameIndex) < model.nframes);
+
+        const size_t frameID = static_cast<size_t>(frameIndex);
+
+        // Update the pose of the desired frame before returning it.
+        pinocchio::updateFramePlacement(model, data, frameID);
+        return data.oMf[frameID];
     }
 
-    auto& Get(const index_t foot) {
-        namespace vs = ANYmalB::Variables;
+    const auto& Get(const std::string& frameName) const {
+        UNGAR_ASSERT(model.existFrame(frameName));
 
-        return data.oMf[vs::FOOT_FRAME_IDS[static_cast<size_t>(foot)]];
+        const size_t frameID = model.getFrameId(frameName);
+
+        // Update the pose of the desired frame before returning it.
+        pinocchio::updateFramePlacement(model, data, frameID);
+        return data.oMf[frameID];
+    }
+
+    auto& Get(const index_t frameIndex) {
+        UNGAR_ASSERT(static_cast<index_t>(frameIndex) < model.nframes);
+
+        const size_t frameID = static_cast<size_t>(frameIndex);
+
+        // Update the pose of the desired frame before returning it.
+        pinocchio::updateFramePlacement(model, data, frameID);
+        return data.oMf[frameID];
+    }
+
+    auto& Get(const std::string& frameName) {
+        UNGAR_ASSERT(model.existFrame(frameName));
+
+        const size_t frameID = model.getFrameId(frameName);
+
+        // Update the pose of the desired frame before returning it.
+        pinocchio::updateFramePlacement(model, data, frameID);
+        return data.oMf[frameID];
     }
 
     const pinocchio::ModelTpl<_Scalar>& model;
@@ -136,13 +192,21 @@ int main() {
         q_.Get(vs::position).setRandom();
     }
 
-    UNGAR_LOG(info, "Computing the pose of feet...");
-    robot.Compute(qs::foot_pose).At(q);
+    UNGAR_LOG(info, "Computing the pose of the feet...");
+    robot.Compute(qs::frame_pose).At(q);
     UNGAR_LOG(info, "Done.");
-    for (const auto foot : {vs::LF, vs::LH, vs::RF, vs::RH}) {
-        UNGAR_LOG(info, "Pose of the {}-th foot:\n{}", foot, robot.Get(qs::foot_pose, foot));
+    for (const auto i : enumerate(vs::NUM_LEGS) | cast_to<size_t>) {
+        const auto [footFrameIndex, footFrameName] =
+            std::pair{vs::FOOT_FRAME_INDICES[i], vs::FOOT_FRAME_NAMES[i]};
+        [[maybe_unused]] const pinocchio::SE3 footFramePoseByIndex =
+            robot.Get(qs::frame_pose, footFrameIndex);
+        [[maybe_unused]] const pinocchio::SE3 footFramePoseByName =
+            robot.Get(qs::frame_pose, footFrameName);
+
+        UNGAR_LOG(info, Utils::DASH_LINE_SEPARATOR);
+        UNGAR_LOG(info, "Pose of the foot ('{}'):\n{}", footFrameName, footFramePoseByIndex);
+        UNGAR_ASSERT(footFramePoseByIndex.isEqual(footFramePoseByName));
     }
-    UNGAR_LOG(info, Utils::DASH_LINE_SEPARATOR);
 
     return 0;
 }

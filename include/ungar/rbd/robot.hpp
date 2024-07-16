@@ -58,9 +58,19 @@ class Robot {
         return RBD::Evaluator<quantity, _Scalar>{_model, *_data};
     }
 
+    decltype(auto) Get(auto quantity) const {
+        const auto getter = RBD::Getter<quantity, _Scalar>{_model, *_data};
+        return getter.Get();
+    }
+
     decltype(auto) Get(auto quantity, auto&&... args) const {
         const auto getter = RBD::Getter<quantity, _Scalar>{_model, *_data};
         return getter.Get(std::forward<decltype(args)>(args)...);
+    }
+
+    decltype(auto) Get(auto quantity) {
+        auto getter = RBD::Getter<quantity, _Scalar>{_model, *_data};
+        return getter.Get();
     }
 
     decltype(auto) Get(auto quantity, auto&&... args) {
